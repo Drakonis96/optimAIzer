@@ -8,10 +8,12 @@ optimAIzer is a local-first AI workspace with chat, notes, autonomous agents, an
 
 ## Preview
 
-![Screenshot 1](public/screenshots/screenshot-1.png)
-![Screenshot 2](public/screenshots/screenshot-2.png)
-![Screenshot 3](public/screenshots/screenshot-3.png)
-![Screenshot 4](public/screenshots/screenshot-4.png)
+<p align="center">
+  <img src="public/screenshots/screenshot-1.png" width="700"><br>
+  <img src="public/screenshots/screenshot-2.png" width="700"><br>
+  <img src="public/screenshots/screenshot-3.png" width="700"><br>
+  <img src="public/screenshots/screenshot-4.png" width="700">
+</p>
 
 ## Table of Contents
 1. [Preview](#preview)
