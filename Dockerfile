@@ -14,7 +14,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/server/node_modules ./server/node_modules
 COPY . .
 
-RUN npm run build
+RUN node ./node_modules/vite/bin/vite.js build \
+  && node ./server/node_modules/typescript/bin/tsc -p ./server/tsconfig.json
 
 FROM node:20-alpine AS runner
 WORKDIR /app

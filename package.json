@@ -8,8 +8,8 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "vite",
     "dev:server": "cd server && npm run dev",
-    "build": "vite build && cd server && npm run build",
-    "build:client": "vite build",
+    "build": "node ./node_modules/vite/bin/vite.js build && cd server && npm run build",
+    "build:client": "node ./node_modules/vite/bin/vite.js build",
     "build:server": "cd server && npm run build",
     "desktop:dev": "concurrently \"npm run dev\" \"npm run electron:dev\"",
     "electron:dev": "cross-env ELECTRON_IS_DEV=1 ELECTRON_START_URL=http://localhost:3000 wait-on tcp:3000 tcp:3001 && electron .",
@@ -17,7 +17,7 @@
     "desktop:build": "npm run build && npm run desktop:package",
     "desktop:package": "electron-builder --mac --arm64",
     "test": "node --import ./server/node_modules/tsx/dist/loader.mjs --test --test-concurrency=1 tests/*.test.ts",
-    "preview": "vite preview",
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
     "install:all": "npm install && cd server && npm install"
   },
   "build": {
