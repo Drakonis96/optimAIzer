@@ -1,0 +1,5 @@
+{
+  "name": "optimAIzer",
+  "description": "A powerful, minimalist chat interface featuring dual-model selection, advanced context management, and system prompt configuration.",
+  "requestFramePermissions": []
+}

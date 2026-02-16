@@ -1,0 +1,88 @@
+{
+  "name": "optimaizer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "cd server && npm run dev",
+    "build": "vite build && cd server && npm run build",
+    "build:client": "vite build",
+    "build:server": "cd server && npm run build",
+    "desktop:dev": "concurrently \"npm run dev\" \"npm run electron:dev\"",
+    "electron:dev": "cross-env ELECTRON_IS_DEV=1 ELECTRON_START_URL=http://localhost:3000 wait-on tcp:3000 tcp:3001 && electron .",
+    "desktop:start": "cross-env ELECTRON_IS_DEV=0 electron .",
+    "desktop:build": "npm run build && npm run desktop:package",
+    "desktop:package": "electron-builder --mac --arm64",
+    "test": "node --import ./server/node_modules/tsx/dist/loader.mjs --test --test-concurrency=1 tests/*.test.ts",
+    "preview": "vite preview",
+    "install:all": "npm install && cd server && npm install"
+  },
+  "build": {
+    "appId": "com.optimaizer.app",
+    "productName": "optimAIzer",
+    "compression": "maximum",
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "server/dist/**/*",
+      "server/package.json",
+      "package.json"
+    ],
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "icon": "build/icon.icns"
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "react": "^19.2.4",
+    "lucide-react": "^0.563.0",
+    "react-dom": "^19.2.4",
+    "react-markdown": "9",
+    "remark-gfm": "4",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^37.4.0",
+    "electron-builder": "^26.0.12",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0",
+    "wait-on": "^8.0.1"
+  }
+}

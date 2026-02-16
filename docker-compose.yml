@@ -1,0 +1,35 @@
+services:
+  optimaizer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: optimaizer
+    restart: unless-stopped
+    ports:
+      - "7189:7189"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 7189
+      CORS_ORIGIN: http://localhost:7189
+    volumes:
+      - ./data:/app/data
+      # ── Host filesystem access ──────────────────────────────────────────
+      # Mount host directories so the agent can read/write files on your
+      # machine.  They appear inside the container under /host/...
+      # Adjust the left side (before the colon) to match YOUR system.
+      #
+      # macOS example:
+      #- ${HOST_HOME:-/Users}:/host/Users:rw
+      #
+      # Linux / OpenMediaVault example (uncomment & comment the macOS line):
+      # - ${HOST_HOME:-/home}:/host/home:rw
+      #
+      # Extra mount points (NAS, external drives, shared folders, etc.):
+      # - /Volumes/MyNAS:/host/nas:rw          # macOS external volume
+      # - /mnt/storage:/host/storage:rw        # Linux / OMV shared folder
+      # - /srv/dev-disk-by-uuid-xxx:/host/omv:rw  # OpenMediaVault disk
+      #
+      # Windows (Docker Desktop + WSL2) — paths use /mnt/c/... format:
+      # - /mnt/c/Users:/host/Users:rw
