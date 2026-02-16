@@ -2,19 +2,29 @@
 
 optimAIzer is a local-first AI workspace with chat, notes, autonomous agents, and multi-provider model orchestration. It includes a React frontend, a Node/Express backend, SQLite persistence, local authentication, and optional Docker/Electron deployment.
 
+![optimAIzer logo](public/logo.png)
+
+## Preview
+
+![Screenshot 1](public/screenshots/screenshot-1.png)
+![Screenshot 2](public/screenshots/screenshot-2.png)
+![Screenshot 3](public/screenshots/screenshot-3.png)
+![Screenshot 4](public/screenshots/screenshot-4.png)
+
 ## Table of Contents
-1. [What this app includes](#what-this-app-includes)
-2. [Quick installation](#quick-installation)
-3. [First run](#first-run)
-4. [Docker deployment (port 7189)](#docker-deployment-port-7189)
-5. [Desktop app for macOS (Electron)](#desktop-app-for-macos-electron)
-6. [Main features](#main-features)
-7. [New capabilities](#new-capabilities)
-8. [Project structure](#project-structure)
-9. [Useful commands](#useful-commands)
-10. [Tests](#tests)
-11. [Security notes for GitHub publishing](#security-notes-for-github-publishing)
-12. [Common issues](#common-issues)
+1. [Preview](#preview)
+2. [What this app includes](#what-this-app-includes)
+3. [Quick installation](#quick-installation)
+4. [First run](#first-run)
+5. [Docker deployment (port 7189)](#docker-deployment-port-7189)
+6. [Desktop app for macOS (Electron)](#desktop-app-for-macos-electron)
+7. [Main features](#main-features)
+8. [New capabilities](#new-capabilities)
+9. [Project structure](#project-structure)
+10. [Useful commands](#useful-commands)
+11. [Tests](#tests)
+12. [Security notes for GitHub publishing](#security-notes-for-github-publishing)
+13. [Common issues](#common-issues)
 
 ## What this app includes
 - **Frontend (React + Vite):** chat, notes, and agent workspaces.
