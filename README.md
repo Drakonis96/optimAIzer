@@ -1,8 +1,10 @@
 # optimAIzer
 
-optimAIzer is a local-first AI workspace with chat, notes, autonomous agents, and multi-provider model orchestration. It includes a React frontend, a Node/Express backend, SQLite persistence, local authentication, and optional Docker/Electron deployment.
+<p align="center">
+  <img src="public/logo.png" alt="optimAIzer logo" width="180">
+</p>
 
-![optimAIzer logo](public/logo.png)
+optimAIzer is a local-first AI workspace with chat, notes, autonomous agents, and multi-provider model orchestration. It includes a React frontend, a Node/Express backend, SQLite persistence, local authentication, and optional Docker/Electron deployment.
 
 ## Preview
 
