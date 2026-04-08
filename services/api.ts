@@ -1360,6 +1360,10 @@ export interface SkillSummaryApi {
   enabled: boolean;
   priority: number;
   category?: string;
+  // Bilingual support
+  name_en?: string;
+  description_en?: string;
+  tags_en?: string[];
 }
 
 export async function getBuiltinSkillsApi(): Promise<SkillSummaryApi[]> {

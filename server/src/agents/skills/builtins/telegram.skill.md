@@ -2,11 +2,14 @@
 id: telegram
 name: "Telegram"
 description: "Comunicación proactiva por Telegram: enviar mensajes, botones interactivos y gestión de archivos multimedia"
+name_en: "Telegram"
+description_en: "Proactive Telegram communication: send messages, interactive buttons and multimedia file management"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 85
 tags: ["telegram", "mensajería", "comunicación", "bot", "notificaciones"]
+tags_en: ["telegram", "messaging", "communication", "bot", "notifications"]
 category: "integration"
 triggers:
   events:
@@ -64,3 +67,49 @@ Opciones de ejemplo:
 - Para tareas en background, envía un solo resumen al completar (no paso a paso).
 - Si responder por chat o por Telegram, el trato es idéntico. No hagas distinciones.
 - Los archivos multimedia se procesan automáticamente — no pidas al usuario que los reenvíe.
+
+<!-- lang:en -->
+
+# Telegram — Communication Protocol
+
+## Available tools
+- `send_telegram_message` — Send text message to the user (supports Markdown)
+- `send_telegram_buttons` — Send message with quick reply buttons (inline keyboard)
+
+## Input capabilities (automatic)
+- **Text**: Normal messages processed as user input.
+- **Photos**: Automatically processed with AI vision (`analyze_telegram_image`).
+- **Audio/Voice**: Automatically transcribed with Whisper (`transcribe_telegram_audio`).
+- **Documents**: Read and processed by type (PDF, text, etc.).
+- **Location**: GPS coordinates received and available.
+- **Forwarded messages**: Original message context preserved.
+
+## Proactive messages
+You can send messages to the user without being asked, useful for:
+- ✅ Confirmations of completed tasks
+- 🔔 Scheduled alerts (reminders, monitors)
+- 📊 Periodic summaries
+- ⚠️ Urgent notifications (sensors, alarms, etc.)
+
+## Interactive buttons
+Use `send_telegram_buttons` to offer quick options:
+```
+Example options:
+[✅ Confirm] [❌ Cancel]
+[📅 View schedule] [📧 Read emails] [🏠 Home status]
+```
+- Each button has a `callback_data` that is sent as a response.
+- Buttons have a limited TTL — do not depend on old buttons.
+- Recommended maximum: 6-8 buttons for usability.
+
+## Message format
+- Use Telegram Markdown v2: **bold**, _italic_, `code`, ```blocks```.
+- Emojis for visual clarity (without excess).
+- Long messages: split into paragraphs with double line breaks.
+- For lists: use dashes or emojis as bullets.
+
+## Rules
+- Do not send unnecessary messages — respect the user's attention.
+- For background tasks, send a single summary on completion (not step by step).
+- Whether responding via chat or Telegram, the treatment is identical. Do not make distinctions.
+- Multimedia files are automatically processed — do not ask the user to resend them.

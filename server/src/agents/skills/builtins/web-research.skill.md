@@ -2,11 +2,14 @@
 id: web-research
 name: "Investigación Web Avanzada"
 description: "Investigación profunda en la web: búsqueda multi-fuente, extracción de datos, verificación de hechos y síntesis"
+name_en: "Advanced Web Research"
+description_en: "Deep web research: multi-source search, data extraction, fact checking and synthesis"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 65
 tags: ["investigación", "web", "búsqueda", "research", "datos"]
+tags_en: ["research", "web", "search", "investigation", "data"]
 category: "developer"
 triggers:
   events:
@@ -91,3 +94,74 @@ Para análisis complejos o tomas de decisión:
 - Para datos numéricos (precios, estadísticas), indica la fecha de la fuente.
 - Respeta el contexto de sitios con paywall — no intentes bypasses.
 - Si una web no carga, prueba con `browse_website` antes de desistir.
+
+<!-- lang:en -->
+
+# Advanced Web Research — Protocol
+
+## Available tools
+- `web_search` — DuckDuckGo search (fast, no tracking)
+- `fetch_webpage` — Direct web page reading (HTTP GET, no JS)
+- `browse_website` — Navigation with headless Chrome (JS, interactions, screenshots, login)
+
+## Research methodology
+
+### Level 1: Quick search
+For simple factual questions:
+1. A single search with `web_search`.
+2. Extract key data from results.
+3. Respond directly.
+
+### Level 2: Standard research
+For topics requiring context:
+1. **2-3 searches** with varied queries (synonyms, different angles).
+2. `fetch_webpage` on the 2-3 most relevant sources.
+3. Synthesize cross-referenced information.
+4. Cite sources with URLs.
+
+### Level 3: Deep research
+For complex analysis or decision-making:
+1. **4-6 searches** covering multiple perspectives.
+2. `fetch_webpage` on primary sources (official documents, papers, reports).
+3. `browse_website` if you need to interact (fill forms, navigate pagination).
+4. Cross-verify data between sources.
+5. Structured report with clear sections.
+6. List of all sources consulted.
+
+## Effective search techniques
+- **Operators**: `"exact phrase"`, `site:domain.com`, `-exclude`
+- **Time-based search**: Add year or "2024" for recent results.
+- **Multilingual**: Search in both Spanish and English for broader coverage.
+- **Specialized sources**: Search directly on `site:reddit.com`, `site:stackoverflow.com`, etc.
+
+## Page data extraction
+1. Use `fetch_webpage` for static content (articles, Wikipedia, docs).
+2. Use `browse_website` when:
+   - The page requires JavaScript to load content.
+   - You need to click, scroll, or fill forms.
+   - You want a visual screenshot.
+   - You need to authenticate (with configured credentials).
+
+## Response format for research
+```
+📋 **[Topic researched]**
+
+### Key findings
+- [Finding 1] (source: [URL])
+- [Finding 2] (source: [URL])
+
+### Analysis
+[Synthesis and conclusions]
+
+### Sources consulted
+1. [Title] — [URL]
+2. [Title] — [URL]
+```
+
+## Rules
+- ALWAYS cite sources with URLs when possible.
+- Distinguish between verified facts and opinions/estimates.
+- If data is contradictory between sources, flag it explicitly.
+- For numerical data (prices, statistics), indicate the source date.
+- Respect sites with paywalls — do not attempt bypasses.
+- If a website doesn't load, try `browse_website` before giving up.

@@ -65,6 +65,15 @@ export interface Skill {
   createdAt: number;
   /** Last update timestamp */
   updatedAt: number;
+  // --- Bilingual support (English translations) ---
+  /** English skill name */
+  name_en?: string;
+  /** English description */
+  description_en?: string;
+  /** English tags */
+  tags_en?: string[];
+  /** English instructions body */
+  instructions_en?: string;
 }
 
 export interface SkillSummary {
@@ -81,6 +90,10 @@ export interface SkillSummary {
   mcpServerIds: string[];
   createdAt: number;
   updatedAt: number;
+  // --- Bilingual support ---
+  name_en?: string;
+  description_en?: string;
+  tags_en?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -304,6 +317,22 @@ export function parseSkillMarkdown(content: string, filename?: string): Skill {
       ? metadata.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
       : [];
 
+  const tags_en: string[] | undefined = Array.isArray(metadata.tags_en)
+    ? metadata.tags_en.map(String)
+    : typeof metadata.tags_en === 'string'
+      ? metadata.tags_en.split(',').map((t: string) => t.trim()).filter(Boolean)
+      : undefined;
+
+  // Split body on <!-- lang:en --> separator for bilingual instructions
+  let instructions = body;
+  let instructions_en: string | undefined;
+  const langSeparator = '<!-- lang:en -->';
+  const sepIndex = body.indexOf(langSeparator);
+  if (sepIndex !== -1) {
+    instructions = body.slice(0, sepIndex).trim();
+    instructions_en = body.slice(sepIndex + langSeparator.length).trim();
+  }
+
   return {
     id,
     name: metadata.name || id,
@@ -316,9 +345,14 @@ export function parseSkillMarkdown(content: string, filename?: string): Skill {
     triggers,
     mcpServers,
     category: typeof metadata.category === 'string' ? metadata.category : undefined,
-    instructions: body,
+    instructions,
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    // Bilingual fields
+    name_en: metadata.name_en || undefined,
+    description_en: metadata.description_en || undefined,
+    tags_en,
+    instructions_en,
   };
 }
 
@@ -463,6 +497,10 @@ export function buildSkillsPromptSection(userId: string, agentId: string, langua
     : 'ACTIVE SKILLS';
 
   const skillBlocks = skills.map((skill) => {
+    const localName = language === 'en' && skill.name_en ? skill.name_en : skill.name;
+    const localDesc = language === 'en' && skill.description_en ? skill.description_en : skill.description;
+    const localInstructions = language === 'en' && skill.instructions_en ? skill.instructions_en : skill.instructions;
+
     const mcpInfo = skill.mcpServers.length > 0
       ? `\n  MCP: ${skill.mcpServers.map((s) => s.id).join(', ')}`
       : '';
@@ -470,10 +508,10 @@ export function buildSkillsPromptSection(userId: string, agentId: string, langua
       ? `\n  ${language === 'es' ? 'Activadores' : 'Triggers'}: ${skill.triggers.events.join(', ')}${skill.triggers.conditions ? ` (${skill.triggers.conditions})` : ''}`
       : '';
 
-    return `### ${skill.name} (v${skill.version})
-${skill.description}${mcpInfo}${triggerInfo}
+    return `### ${localName} (v${skill.version})
+${localDesc}${mcpInfo}${triggerInfo}
 
-${skill.instructions}`;
+${localInstructions}`;
   });
 
   return `\n<skills>\n${header}:\n\n${skillBlocks.join('\n\n---\n\n')}\n</skills>`;
@@ -531,6 +569,12 @@ export function serializeSkillToMarkdown(skill: Skill): string {
   lines.push(`id: ${skill.id}`);
   lines.push(`name: "${skill.name}"`);
   lines.push(`description: "${skill.description}"`);
+  if (skill.name_en) {
+    lines.push(`name_en: "${skill.name_en}"`);
+  }
+  if (skill.description_en) {
+    lines.push(`description_en: "${skill.description_en}"`);
+  }
   lines.push(`version: "${skill.version}"`);
   lines.push(`author: "${skill.author}"`);
   lines.push(`enabled: ${skill.enabled}`);
@@ -543,6 +587,9 @@ export function serializeSkillToMarkdown(skill: Skill): string {
     lines.push(`tags: [${skill.tags.map((t) => `"${t}"`).join(', ')}]`);
   } else {
     lines.push('tags: []');
+  }
+  if (skill.tags_en && skill.tags_en.length > 0) {
+    lines.push(`tags_en: [${skill.tags_en.map((t) => `"${t}"`).join(', ')}]`);
   }
 
   // Triggers
@@ -575,6 +622,12 @@ export function serializeSkillToMarkdown(skill: Skill): string {
   lines.push('---');
   lines.push('');
   lines.push(skill.instructions);
+  if (skill.instructions_en) {
+    lines.push('');
+    lines.push('<!-- lang:en -->');
+    lines.push('');
+    lines.push(skill.instructions_en);
+  }
 
   return lines.join('\n');
 }
@@ -598,6 +651,9 @@ function skillToSummary(skill: Skill): SkillSummary {
     mcpServerIds: skill.mcpServers.map((s) => s.id),
     createdAt: skill.createdAt,
     updatedAt: skill.updatedAt,
+    name_en: skill.name_en,
+    description_en: skill.description_en,
+    tags_en: skill.tags_en,
   };
 }
 

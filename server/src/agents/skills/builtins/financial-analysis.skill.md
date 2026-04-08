@@ -2,11 +2,14 @@
 id: financial-analysis
 name: "Análisis Financiero Avanzado"
 description: "Análisis financiero completo de acciones, criptomonedas y mercados usando investigación web y datos reales"
+name_en: "Advanced Financial Analysis"
+description_en: "Complete financial analysis of stocks, cryptocurrencies and markets using web research and real data"
 version: "2.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 70
 tags: ["finanzas", "inversiones", "stocks", "crypto", "análisis", "bolsa"]
+tags_en: ["finance", "investments", "stocks", "crypto", "analysis", "markets"]
 category: "finance"
 triggers:
   events:
@@ -81,3 +84,47 @@ Estructura del informe:
 - Si yfinance no está disponible, indicarlo claramente y usar datos de web.
 - Usar emojis para hacer el informe visual (📈📉💹📊).
 - Ofrecer guardar el informe como nota.
+
+<!-- lang:en -->
+
+## Financial Analysis Protocol
+
+When the user requests a financial analysis, follow this strict flow:
+
+### 1. Asset identification
+- Confirm official name, ticker and market/exchange.
+- If there's ambiguity (ADR, multiple exchanges, similar names), **ask** before continuing.
+- Examples: "AAPL" (NASDAQ), "SAN.MC" (BME Madrid), "BTC-USD" (Crypto).
+
+### 2. Web research
+- Search recent news (last 2 weeks) about the company/asset.
+- Search quarterly results, guidance, management changes, litigation, regulation.
+- Summarize potential price impact.
+- Use multiple sources: Reuters, Bloomberg, Yahoo Finance, Investing.com.
+
+### 3. Technical analysis
+- Consult technical analysis sources (TradingView, Investing.com, etc.).
+- Extract: current trend, key support/resistance, volume, RSI, MACD.
+- Identify relevant chart patterns if any.
+
+### 4. Fundamental data (if code_execution available)
+Use yfinance or similar to extract: PER, EPS, Revenue, Profit Margins, Debt/Equity, Free Cash Flow, 52w High/Low, Beta, Dividend Yield.
+
+If code_execution is not available, search fundamental data via web.
+
+### 5. Mandatory final report
+
+Report structure:
+1. **Fundamental Summary** (3-5 lines)
+2. **Technical Summary** (3-5 lines)
+3. **Scenarios:**
+   - **Short term** (1-4 weeks): entry range, exit range, risk
+   - **Medium term** (1-6 months): entry range, exit range, risk
+   - **Long term** (6-24 months): entry range, exit range, risk
+
+### Important rules
+- ⚠️ Always include disclaimer: "This does NOT constitute financial advice."
+- Do not make categorical statements about future prices.
+- If yfinance is not available, clearly indicate it and use web data.
+- Use emojis to make the report visual (📈📉💹📊).
+- Offer to save the report as a note.

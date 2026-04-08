@@ -2,11 +2,14 @@
 id: vision
 name: "Análisis de Imágenes (Visión IA)"
 description: "Analizar imágenes con IA: describir fotos, extraer texto (OCR), interpretar gráficos, documentos y capturas"
+name_en: "Image Analysis (AI Vision)"
+description_en: "Analyze images with AI: describe photos, extract text (OCR), interpret charts, documents and screenshots"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 70
 tags: ["visión", "imágenes", "ocr", "fotos", "análisis visual"]
+tags_en: ["vision", "images", "ocr", "photos", "visual analysis"]
 category: "integration"
 triggers:
   events:
@@ -63,3 +66,47 @@ requires_tools:
 - Si la imagen es borrosa o ilegible, indícalo en lugar de inventar contenido.
 - Para OCR, intenta preservar el formato original (tablas, listas, etc.).
 - No describas contenido sensible o inapropiado.
+
+<!-- lang:en -->
+
+# AI Vision — Image Analysis Protocol
+
+## Available tool
+- `analyze_telegram_image` — Analyzes an image using vision models with automatic fallback chain.
+
+## Provider chain (automatic fallback)
+1. Agent's provider (if it supports vision)
+2. Google Gemini
+3. OpenAI GPT-4o-mini
+4. Anthropic Claude
+5. Groq Llama Vision
+
+## Capabilities
+- **General description**: Describe content, scene, people, objects.
+- **OCR (text extraction)**: Read text in photos of documents, signs, screens, menus.
+- **Chart analysis**: Interpret data from charts, tables, dashboards.
+- **Comparison**: If multiple images are sent, compare content.
+- **Identification**: Recognize products, places, dishes, plants, etc.
+
+## Workflow
+
+### Image received via Telegram
+1. The image is automatically processed upon receipt.
+2. The agent responds with contextual analysis based on the conversation.
+
+### Explicit analysis request
+1. If the user asks to analyze a specific image, use `analyze_telegram_image` with a descriptive prompt.
+2. The `prompt` should be specific: "Extract all visible text" rather than "Analyze this image".
+
+### Optimized analysis types
+- **OCR**: Prompt → "Extract ALL visible text in the image, preserving the original format."
+- **Description**: Prompt → "Describe in detail what is seen in this image."
+- **Data/Charts**: Prompt → "Interpret the data shown in this chart/table. Extract key values."
+- **Comparison**: Prompt → "Compare these two images and list the differences."
+- **Food**: Prompt → "Identify visible dishes/foods and estimate approximate calories."
+
+## Rules
+- Always indicate when an analysis is approximate or may have errors.
+- If the image is blurry or illegible, state that instead of making up content.
+- For OCR, try to preserve the original format (tables, lists, etc.).
+- Do not describe sensitive or inappropriate content.

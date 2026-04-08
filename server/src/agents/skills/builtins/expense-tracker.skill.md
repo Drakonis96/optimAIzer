@@ -2,11 +2,14 @@
 id: expense-tracker
 name: "Control de Gastos"
 description: "Registro, análisis y seguimiento de gastos personales con categorización automática y alertas de presupuesto"
+name_en: "Expense Tracker"
+description_en: "Personal expense recording, analysis and tracking with automatic categorization and budget alerts"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 60
 tags: ["finanzas", "gastos", "presupuesto", "ahorro", "dinero"]
+tags_en: ["finance", "expenses", "budget", "savings", "money"]
 category: "finance"
 triggers:
   events:
@@ -107,3 +110,69 @@ Si el usuario define un presupuesto:
 - Si falta la moneda, usa € por defecto (o la del usuario si se conoce).
 - No juzgues los gastos del usuario.
 - Ofrece guardar el informe como nota al hacer análisis.
+
+<!-- lang:en -->
+
+# Expense Tracker — Protocol
+
+## Expense recording
+
+### Quick format
+The user can speak naturally:
+- "I spent $45 on gas"
+- "Bought groceries for $23.50"
+- "Paid $120 for electricity"
+
+### Recording process
+1. Extract: **amount**, **concept**, **category** (auto-detect), **date** (today if not specified).
+2. Automatic categories:
+   - 🍔 **Food**: restaurant, supermarket, delivery, coffee
+   - 🚗 **Transport**: gas, parking, taxi, metro, tolls
+   - 🏠 **Home**: rent, electricity, water, gas, internet, home insurance
+   - 🛒 **Shopping**: clothing, electronics, Amazon, subscriptions
+   - 🏥 **Health**: pharmacy, doctor, dentist, physiotherapy
+   - 🎉 **Leisure**: cinema, travel, sports, concerts
+   - 📚 **Education**: courses, books, training
+   - 💼 **Work**: office supplies, software, coworking
+   - 📱 **Services**: mobile, insurance, digital subscriptions
+   - 🔧 **Other**: anything that doesn't fit above
+3. Confirm briefly: "✅ Recorded: $45 in 🚗 Transport (gas)".
+4. Save in current month's expense note.
+
+## Queries and analysis
+
+### "How much have I spent this month?"
+1. Search the month's expense note with `search_notes`.
+2. Sum total and breakdown by category.
+3. Compare with budget if defined.
+
+### Monthly summary format
+```
+📊 **Expense summary — January 2025**
+
+💰 Total: $1,234.56
+📊 Daily average: $39.82
+
+Breakdown:
+🏠 Home: $450 (36.4%)
+🍔 Food: $320 (25.9%)
+🚗 Transport: $180 (14.6%)
+🛒 Shopping: $150 (12.1%)
+🎉 Leisure: $134.56 (10.9%)
+
+📈 vs previous month: +5.2%
+```
+
+## Budget alerts
+If the user defines a budget:
+- At 50%: Informative notice
+- At 75%: Moderate alert
+- At 90%: Urgent alert
+- At 100%: Excess notification
+
+## Rules
+- Record the expense immediately, without asking for unnecessary data.
+- If the amount is ambiguous ("about 50"), record the mentioned amount.
+- If the currency is missing, use the user's known currency or default.
+- Do not judge the user's spending.
+- Offer to save the report as a note when doing analysis.

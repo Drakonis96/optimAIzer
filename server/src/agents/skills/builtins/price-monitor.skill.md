@@ -2,11 +2,14 @@
 id: price-monitor
 name: "Monitor de Precios"
 description: "Monitoriza precios de productos en tiendas online y alerta cuando bajan del umbral configurado"
+name_en: "Price Monitor"
+description_en: "Monitor product prices in online stores and alert when they drop below the configured threshold"
 version: "2.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 60
 tags: ["compras", "precios", "alertas", "ahorro", "shopping"]
+tags_en: ["shopping", "prices", "alerts", "savings", "monitoring"]
 category: "finance"
 triggers:
   events:
@@ -85,3 +88,40 @@ Si el usuario pregunta qué precios está siguiendo:
 - Si el precio no se puede extraer de forma fiable, avisar al usuario.
 - No crear múltiples monitores para el mismo producto.
 - Si el producto ya está por debajo del precio objetivo, avisar inmediatamente.
+
+<!-- lang:en -->
+
+# Price Monitor — Protocol
+
+## Setup
+
+### Step 1: Data collection
+1. Ask the user for the **product URL** and **target price** (threshold).
+2. Optionally: check frequency (default every hour).
+3. Verify the URL is accessible with `fetch_webpage` or `browse_website`.
+4. Extract current price as reference.
+
+### Step 2: Create subscription
+Use `subscribe_to_event` to create periodic monitoring:
+- **type**: `poll`
+- **poll_interval_minutes**: 60 (or as requested by user)
+- **poll_target**: the product URL
+- **instruction**: Compare current price with target
+- **conditions**: "Only notify if price ≤ target"
+
+### Step 3: Confirmation
+Show configured monitor with product, current price, target, frequency and URL.
+
+## Periodic check
+Each time it activates:
+1. Access the URL with `fetch_webpage` or `browse_website`.
+2. Extract current price.
+3. Compare with threshold.
+4. **If met**: Send alert via Telegram.
+5. **If not met**: Silent log (no message).
+
+## Rules
+- Verify the URL is accessible before creating the monitor.
+- If the price cannot be reliably extracted, warn the user.
+- Do not create multiple monitors for the same product.
+- If the product is already below the target price, notify immediately.

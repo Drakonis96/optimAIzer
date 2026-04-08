@@ -2,11 +2,14 @@
 id: automation-workflows
 name: "Automatización y Workflows"
 description: "Crear cadenas de automatización: combinar herramientas, programar tareas complejas y flujos condicionales"
+name_en: "Automation & Workflows"
+description_en: "Create automation chains: combine tools, schedule complex tasks and conditional flows"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 70
 tags: ["automatización", "workflows", "tareas", "cron", "encadenamiento"]
+tags_en: ["automation", "workflows", "scheduling", "triggers", "chains"]
 category: "productivity"
 triggers:
   events:
@@ -130,3 +133,36 @@ Pasos:
 - Incluir condiciones de filtrado para reducir falsos positivos.
 - Permitir al usuario desactivar fácilmente cualquier automatización.
 - Documentar cada workflow creado en una nota para referencia.
+
+<!-- lang:en -->
+
+# Automation & Workflows — Protocol
+
+## Capabilities
+- Chain multiple tools into automated sequences
+- Schedule complex recurring tasks
+- Create conditional workflows (if X then Y)
+- Event-driven automation
+- Multi-step task orchestration
+
+## Workflow
+
+### Creating an automation
+1. Understand the trigger: time-based, event-based, or manual.
+2. Define the sequence of actions.
+3. Identify conditions and branching logic.
+4. Implement using `schedule_task` or `subscribe_to_event`.
+5. Test and confirm with user.
+
+### Common patterns
+- Morning briefing automation (time-triggered)
+- Email-to-task conversion (event-triggered)
+- Price drop alerts (poll-triggered)
+- Weekly reports (cron-scheduled)
+
+## Rules
+- Always explain the full workflow before creating.
+- Ask for confirmation before scheduling recurring tasks.
+- Include error handling considerations.
+- Do not create overlapping automations.
+- Allow easy cancellation and modification.

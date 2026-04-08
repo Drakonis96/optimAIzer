@@ -2,11 +2,14 @@
 id: sonarr
 name: "Sonarr — Gestión de Series"
 description: "Buscar, añadir, monitorizar y gestionar series de TV con Sonarr (descargas automatizadas)"
+name_en: "Sonarr — TV Series Management"
+description_en: "Search, add, monitor and manage TV series with Sonarr (automated downloads)"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 75
 tags: ["media", "series", "sonarr", "descargas", "plex", "tv"]
+tags_en: ["media", "series", "sonarr", "downloads", "plex", "tv"]
 category: "integration"
 triggers:
   events:
@@ -89,3 +92,64 @@ requires_tools:
 - Pregunta siempre el alcance: serie completa, temporada o episodios.
 - Muestra el año de inicio para desambiguar series con mismo nombre.
 - Para series en emisión, informa de episodios futuros no disponibles.
+
+<!-- lang:en -->
+
+# Sonarr — TV Series Management Protocol
+
+## Available tools
+- `sonarr_search_series` — Search series online (TVDB/IMDb IDs)
+- `sonarr_add_series` — Add series for monitoring/download
+- `sonarr_library` — List series in the local library
+- `sonarr_series_status` — Detailed series status
+- `sonarr_season_episodes` — View episodes of a season with individual status
+- `sonarr_search_download` — Search and download specific episodes
+- `sonarr_queue` — Active download queue
+- `sonarr_get_releases` — Search releases with quality filters
+- `sonarr_delete_series` — Remove series from library
+
+## Mandatory workflow
+
+### "Download [series]" or "Add [series]"
+1. **Search the library first** with `sonarr_library`.
+2. If already there, report status (seasons/episodes downloaded vs pending).
+3. If NOT there, search online with `sonarr_search_series`.
+4. Show options: title, start year, TVDB ID, number of seasons.
+5. **Ask the user**:
+   - Complete series?
+   - Specific season?
+   - Specific episodes?
+6. Ask for confirmation before adding.
+7. Use `sonarr_add_series` with TVDB ID and season selection.
+8. Confirm with receipt.
+
+### "What series do I have?"
+1. `sonarr_library` to list.
+2. Show: title, available/total seasons, downloaded episodes.
+
+### "What episodes does [series] have?"
+1. Search the series in the library.
+2. Use `sonarr_season_episodes` for the requested season.
+3. Show each episode with: number, title, status (downloaded/pending/unaired).
+
+### "How are the downloads going?"
+1. `sonarr_queue` for active downloads.
+2. Show: series, episode, progress, ETA.
+
+### Quality control
+- Similar to Radarr: use `sonarr_get_releases` with size filters if the user requires it.
+
+### Delete series
+1. Confirm which series.
+2. Show details and size.
+3. Ask if files should also be deleted.
+4. Explicit confirmation.
+5. `sonarr_delete_series`.
+
+## Strict rules
+- ALWAYS search library before adding.
+- ALWAYS identify by TVDB/IMDb ID.
+- NEVER add without user confirmation.
+- Always ask the scope: complete series, season or episodes.
+- Show start year to disambiguate series with the same name.
+- For airing series, report unavailable future episodes.

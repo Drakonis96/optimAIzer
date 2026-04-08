@@ -2,11 +2,14 @@
 id: smart-scheduling
 name: "Planificación Inteligente"
 description: "Gestión avanzada de agenda: planificación de jornadas, bloques de tiempo, hábitos y optimización del calendario"
+name_en: "Smart Scheduling"
+description_en: "Advanced schedule management: day planning, time blocks, habits and calendar optimization"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 65
 tags: ["productividad", "planificación", "agenda", "tiempo", "hábitos"]
+tags_en: ["productivity", "scheduling", "agenda", "time", "habits"]
 category: "productivity"
 triggers:
   events:
@@ -91,3 +94,49 @@ Huecos libres: [horarios disponibles]
 - Pregunta preferencias: ¿madrugador o noctámbulo? ¿Bloques largos o cortos?
 - No crees eventos/recordatorios sin confirmación del usuario.
 - Si el usuario tiene demasiados compromisos, sugiere priorizar (no llenar todo).
+
+<!-- lang:en -->
+
+# Smart Scheduling — Protocol
+
+## Capabilities
+- Daily/weekly planning with time blocks
+- Morning/evening routine creation
+- Habit tracking with reminders
+- Existing schedule optimization
+- Time-blocking for deep work
+
+## Workflows
+
+### Day planning
+1. Check the day's schedule with `list_calendar_events`.
+2. Identify free slots.
+3. Propose time distribution:
+   - 🔴 Focus blocks (deep work, no interruptions)
+   - 🟡 Administrative tasks (emails, short meetings)
+   - 🟢 Breaks and transitions
+   - 🔵 Personal time / exercise
+4. Create calendar events if the user accepts.
+5. Schedule transition reminders between blocks.
+
+### Weekly planning
+1. Review existing commitments for the week (`list_calendar_events` 7 days).
+2. Identify patterns and gaps.
+3. Propose weekly distribution:
+   - "Maker" days (creative/deep work)
+   - "Manager" days (meetings, admin)
+   - Review/planning blocks
+4. Present in visual format as a weekly table.
+
+### Habits and routines
+1. Define the habit with the user: what, when, duration, frequency.
+2. Create recurring task with `schedule_task` (cron).
+3. Create tracking list with `create_list` for tracking.
+4. Example: "Morning routine 6:30-7:30: meditation (10m), exercise (30m), shower (15m), journaling (5m)".
+
+## Rules
+- Always respect existing calendar events — do not propose overwriting.
+- Include mandatory breaks (minimum 15 min every 2h of work).
+- Ask preferences: early bird or night owl? Long or short blocks?
+- Do not create events/reminders without user confirmation.
+- If the user has too many commitments, suggest prioritizing (don't fill everything).

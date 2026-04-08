@@ -5877,7 +5877,8 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                   (() => {
                     const textFilter = skillsFilter.toLowerCase();
                     const matchesText = (s: SkillSummaryApi) =>
-                      !textFilter || s.name.toLowerCase().includes(textFilter) || s.description.toLowerCase().includes(textFilter) || s.tags.some(t => t.toLowerCase().includes(textFilter));
+                      !textFilter || s.name.toLowerCase().includes(textFilter) || s.description.toLowerCase().includes(textFilter) || s.tags.some(t => t.toLowerCase().includes(textFilter))
+                        || (s.name_en || '').toLowerCase().includes(textFilter) || (s.description_en || '').toLowerCase().includes(textFilter) || (s.tags_en || []).some(t => t.toLowerCase().includes(textFilter));
                     const matchesCat = (s: SkillSummaryApi) =>
                       skillsCategoryFilter === 'all' || (s.category || 'general') === skillsCategoryFilter;
 
@@ -5922,17 +5923,20 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                       >
                         <div className="flex-1 min-w-0 mr-3">
                           <div className="flex items-center gap-2">
-                            <span className={`text-sm font-medium truncate ${isInstalled ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300'}`}>{skill.name}</span>
+                            <span className={`text-sm font-medium truncate ${isInstalled ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300'}`}>{language === 'en' && skill.name_en ? skill.name_en : skill.name}</span>
                             <span className="text-[10px] text-zinc-400">v{skill.version}</span>
                           </div>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{skill.description}</p>
-                          {skill.tags.length > 0 && (
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{language === 'en' && skill.description_en ? skill.description_en : skill.description}</p>
+                          {(() => {
+                            const displayTags = language === 'en' && skill.tags_en && skill.tags_en.length > 0 ? skill.tags_en : skill.tags;
+                            return displayTags.length > 0 ? (
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {skill.tags.slice(0, 4).map((tag) => (
+                              {displayTags.slice(0, 4).map((tag) => (
                                 <span key={tag} className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-[9px] text-zinc-500 dark:text-zinc-400">{tag}</span>
                               ))}
                             </div>
-                          )}
+                            ) : null;
+                          })()}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isInstalled ? (

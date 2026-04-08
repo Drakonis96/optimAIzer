@@ -2,11 +2,14 @@
 id: project-manager
 name: "Gestión de Proyectos"
 description: "Planificación, seguimiento y gestión de proyectos: tareas, hitos, dependencias y seguimiento de progreso"
+name_en: "Project Management"
+description_en: "Project planning, tracking and management: tasks, milestones, dependencies and progress tracking"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 60
 tags: ["proyectos", "tareas", "gestión", "productividad", "planificación"]
+tags_en: ["projects", "tasks", "management", "productivity", "planning"]
 category: "productivity"
 triggers:
   events:
@@ -106,3 +109,43 @@ Tres listas por proyecto:
 - Si una tarea lleva más de 3 días sin moverse, sugerir dividirla.
 - Alertar si el deadline se acerca y hay tareas sin empezar.
 - No crear estructura excesiva para proyectos pequeños (adaptar al tamaño).
+
+<!-- lang:en -->
+
+# Project Management — Protocol
+
+## Project structure
+
+### Project creation
+1. Collect information: name, objective, deadline, participants.
+2. Create a **note** with the general plan.
+3. Create **lists** for each phase/sprint with concrete tasks.
+4. Schedule review reminders with `schedule_task`.
+
+### Tracking with lists
+Each project phase is a list with tasks showing completion status.
+
+### Project dashboard
+Show: global progress percentage, current phase, deadline, completed/in-progress/pending/blocked tasks, risk assessment.
+
+### Periodic review
+If the user activates automatic reviews:
+1. Schedule with `schedule_task`.
+2. On each review: read project lists, calculate progress, identify overdue tasks, send summary via Telegram.
+
+## Supported methodologies
+
+### Simple Kanban
+Three lists per project: To do, In progress, Completed.
+
+### Sprint (mini-Scrum)
+- 1-2 week sprints
+- General backlog + current sprint
+- Retrospective at end of sprint
+
+## Rules
+- Tasks must be actionable and specific (not generic).
+- Each task must have a clear "done" criterion.
+- If a task has been stuck for more than 3 days, suggest splitting it.
+- Alert if the deadline is approaching and there are unstarted tasks.
+- Do not create excessive structure for small projects (adapt to size).

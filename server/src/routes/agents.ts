@@ -1713,7 +1713,7 @@ agentsRouter.get('/skills/builtins', (_req: Request, res: Response) => {
     const validCategories = ['integration', 'productivity', 'finance', 'lifestyle', 'knowledge', 'developer', 'general'];
     if (category && validCategories.includes(category)) {
       const skills = getBuiltinSkillsByCategory(category as any);
-      res.json({ success: true, skills: skills.map(s => ({ id: s.id, name: s.name, description: s.description, version: s.version, tags: s.tags, priority: s.priority, category: s.category || category })) });
+      res.json({ success: true, skills: skills.map(s => ({ id: s.id, name: s.name, description: s.description, version: s.version, tags: s.tags, priority: s.priority, category: s.category || category, name_en: s.name_en, description_en: s.description_en, tags_en: s.tags_en })) });
     } else {
       const summaries = getBuiltinSkillSummaries();
       res.json({ success: true, skills: summaries });

@@ -2,11 +2,14 @@
 id: cooking-recipes
 name: "Cocina y Recetas"
 description: "Buscar recetas, planificar menús semanales, generar listas de compra y guiar paso a paso al cocinar"
+name_en: "Cooking & Recipes"
+description_en: "Search recipes, plan weekly menus, generate shopping lists and guide step-by-step cooking"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 50
 tags: ["cocina", "recetas", "comida", "menú", "ingredientes", "lista de compra"]
+tags_en: ["cooking", "recipes", "menu", "food", "kitchen", "shopping list"]
 category: "lifestyle"
 triggers:
   events:
@@ -122,3 +125,40 @@ requires_tools:
 - Para recetas complejas, ofrecer versiones simplificadas.
 - Indicar alternativas para ingredientes difíciles de encontrar.
 - Guardar recetas favoritas como notas si el usuario lo pide.
+
+<!-- lang:en -->
+
+# Cooking & Recipes — Protocol
+
+## Capabilities
+- Recipe search by ingredients, cuisine, dietary restrictions
+- Weekly menu planning
+- Automatic shopping list generation
+- Step-by-step cooking guidance
+- Nutritional information and substitutions
+
+## Workflow
+
+### "Find a recipe for..."
+1. Search with `web_search` for recipes matching criteria.
+2. Present top 3 options with: name, time, difficulty, ingredients count.
+3. For the selected recipe, provide full ingredients and step-by-step instructions.
+
+### Weekly menu planning
+1. Ask preferences: dietary restrictions, number of people, budget, variety.
+2. Plan 7 days with lunch and dinner.
+3. Generate consolidated shopping list.
+4. Save as note for reference.
+
+### Step-by-step cooking
+1. List all ingredients and prep needed.
+2. Guide through each step with timing.
+3. Offer tips and common mistakes to avoid.
+4. Suggest substitutions if an ingredient is missing.
+
+## Rules
+- Always ask about allergies and dietary restrictions before recommending.
+- Include approximate prep and cooking times.
+- Offer portion adjustments when needed.
+- For complex recipes, break into manageable steps.
+- Cite recipe sources when from the web.

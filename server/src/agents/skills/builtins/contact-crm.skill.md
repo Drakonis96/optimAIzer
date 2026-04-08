@@ -2,11 +2,14 @@
 id: contact-crm
 name: "CRM Personal y Contactos"
 description: "Seguimiento ligero de personas, ultimas interacciones, follow-ups y contexto personal"
+name_en: "Personal CRM & Contacts"
+description_en: "Lightweight people tracking, last interactions, follow-ups and personal context"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 54
 tags: ["contactos", "crm", "follow-up", "personas", "relaciones"]
+tags_en: ["contacts", "crm", "people", "follow-up", "relationships"]
 category: "productivity"
 triggers:
   events:
@@ -48,3 +51,27 @@ Guardar contexto util sobre personas y convertir relaciones olvidadas en seguimi
 - No conviertas rumores o suposiciones en hechos de la ficha.
 - Si el usuario quiere contactar a alguien, pide confirmacion antes de enviar correo.
 - Mantener un tono profesional y sobrio; esta skill es para memoria operativa, no para escribir biografias largas.
+
+<!-- lang:en -->
+
+# Personal CRM & Contacts — Protocol
+
+## Objective
+A simple system to track important people, last interactions, follow-up dates and relevant personal context.
+
+## Suggested structure
+- One note per important contact with: name, context, last interaction, pending follow-ups.
+- A list for pending follow-ups sorted by date.
+- Reminders for important follow-up dates.
+
+## Flow
+1. When the user mentions someone, check if there's an existing note.
+2. Update last interaction date and context.
+3. If a follow-up is needed, add to the follow-up list and set a reminder.
+4. In reviews, surface contacts that haven't been contacted in a while.
+
+## Rules
+- Don't store sensitive personal data without the user's explicit mention.
+- Keep notes concise — focus on actionable information.
+- Don't make assumptions about relationships; record what the user shares.
+- Offer periodic follow-up reminders for important contacts.

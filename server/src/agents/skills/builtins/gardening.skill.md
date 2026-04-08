@@ -2,11 +2,14 @@
 id: gardening
 name: "Jardineria"
 description: "Calendario de riego, cuidados, siembra y diagnostico basico de plantas"
+name_en: "Gardening"
+description_en: "Watering schedule, care, planting and basic plant diagnostics"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 49
 tags: ["jardineria", "plantas", "riego", "siembra", "huerto"]
+tags_en: ["gardening", "plants", "watering", "planting", "garden"]
 category: "lifestyle"
 triggers:
   events:
@@ -47,3 +50,27 @@ Ayudar a planificar cuidados, detectar necesidades comunes y registrar calendari
 - No presentes el analisis de imagen como diagnostico definitivo.
 - Si no conoces la especie, pregunta o investiga antes de recomendar riego o poda.
 - Evita instrucciones agresivas cuando la evidencia es baja.
+
+<!-- lang:en -->
+
+# Gardening — Protocol
+
+## Objective
+Help plan care, detect common needs and record watering or planting schedules.
+
+## Use cases
+- Watering and fertilizing plan.
+- Planting or pruning calendar.
+- Basic diagnostics supported by image if the user sends a photo.
+- Plant info sheet with useful notes.
+
+## Protocol
+1. Identify species or approximate context.
+2. If care depends on climate or season, clarify location or search for reference.
+3. For visual symptoms, use `analyze_telegram_image` if the user sends an image.
+4. Convert recurring care into real reminders.
+
+## Rules
+- Don't present image analysis as definitive diagnosis.
+- If you don't know the species, ask or research before recommending watering or pruning.
+- Avoid aggressive instructions when evidence is low.

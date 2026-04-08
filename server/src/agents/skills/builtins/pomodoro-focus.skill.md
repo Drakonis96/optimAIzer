@@ -2,11 +2,14 @@
 id: pomodoro-focus
 name: "Pomodoro y Focus"
 description: "Gestion de sesiones de concentracion, descansos y bloques de trabajo con recordatorios"
+name_en: "Pomodoro & Focus"
+description_en: "Focus session management, breaks and work blocks with reminders"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 58
 tags: ["pomodoro", "focus", "timer", "deep work", "productividad"]
+tags_en: ["pomodoro", "focus", "timer", "deep work", "productivity"]
 category: "productivity"
 triggers:
   events:
@@ -54,3 +57,33 @@ Ayudar al usuario a iniciar, mantener y cerrar sesiones de trabajo profundo usan
 - Si el usuario quiere cancelar una sesion, usa `cancel_reminder` cuando aplique.
 - Si el usuario pierde una sesion, ofrece replanificar con `postpone_reminder` en vez de reiniciar desde cero sin preguntar.
 - Mantener el tono corto y operativo; esta skill debe reducir friccion, no crear mas texto.
+
+<!-- lang:en -->
+
+# Pomodoro & Focus — Protocol
+
+## Objective
+Help the user start, maintain and close deep work sessions using real reminders, not simulated timers.
+
+## Protocol
+1. Define a concrete session objective before starting.
+2. Agree on format: 25/5, 50/10, custom sprint or single block.
+3. Use `set_reminder` to mark end of block and break.
+4. If the user wants to record progress, save a brief session note.
+
+## Quick template
+- Block objective
+- Focus duration
+- Break duration
+- Success criteria
+
+## Session close
+- Ask what was completed.
+- Record blockers and next step.
+- If needed, schedule the next block or postpone the current reminder.
+
+## Rules
+- Never say a timer is running if you haven't created real reminders.
+- If the user wants to cancel a session, use `cancel_reminder` when applicable.
+- If the user misses a session, offer to reschedule with `postpone_reminder` instead of restarting from scratch without asking.
+- Keep the tone short and operational; this skill should reduce friction, not create more text.

@@ -2,11 +2,14 @@
 id: podcast-video-summarizer
 name: "Resumen de Podcast y Video"
 description: "Resume podcasts, videos y notas de voz, extrayendo ideas clave, timestamps y tareas"
+name_en: "Podcast & Video Summarizer"
+description_en: "Summarize podcasts, videos and voice notes, extracting key ideas, timestamps and tasks"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 57
 tags: ["podcast", "video", "youtube", "resumen", "transcripcion"]
+tags_en: ["podcast", "video", "youtube", "summary", "transcription"]
 category: "knowledge"
 triggers:
   events:
@@ -39,3 +42,21 @@ Extraer ideas clave, estructura y acciones concretas de contenido audiovisual si
 - No inventes timestamps si la fuente no los ofrece.
 - Si el enlace no da acceso suficiente, pide archivo, transcript o extracto.
 - Si el usuario quiere guardar el resumen, ofrece crear una nota.
+
+<!-- lang:en -->
+
+# Podcast & Video Summarizer — Protocol
+
+## Objective
+Extract key ideas, structure and concrete actions from audiovisual content without inventing transcriptions or timestamps.
+
+## Recommended flow
+1. If the user shares an audio or voice note, use `transcribe_telegram_audio`.
+2. If they share a file, use `process_telegram_file` when applicable.
+3. If they share a link, try to get context with `fetch_webpage` or `browse_website`.
+4. Summarize in levels: central idea, key points, actionable phrases, tasks or decisions.
+
+## Rules
+- Don't invent timestamps if the source doesn't provide them.
+- If the link doesn't give enough access, ask for the file, transcript or excerpt.
+- If the user wants to save the summary, offer to create a note.

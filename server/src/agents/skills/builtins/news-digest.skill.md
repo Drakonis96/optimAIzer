@@ -2,11 +2,14 @@
 id: news-digest
 name: "Resumen de Noticias"
 description: "Búsqueda y resumen de noticias actuales por tema, región o interés personal con análisis y contexto"
+name_en: "News Digest"
+description_en: "Search and summarize current news by topic, region or personal interest with analysis and context"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 55
 tags: ["noticias", "actualidad", "resumen", "news", "digest"]
+tags_en: ["news", "current events", "summary", "digest", "updates"]
 category: "knowledge"
 triggers:
   events:
@@ -82,3 +85,32 @@ Si el usuario quiere recibir noticias periódicamente:
 - No tomar partido político — presentar de forma neutral.
 - Indicar la fecha de las noticias (evitar presentar noticias antiguas como nuevas).
 - Para temas sensibles, usar lenguaje cuidadoso y factual.
+
+<!-- lang:en -->
+
+# News Digest — Protocol
+
+## On-demand news search
+
+### "What happened today?" / "News about [topic]"
+1. Perform 3-4 web searches with varied queries.
+2. Read the 3-5 most relevant sources with `fetch_webpage`.
+3. Synthesize with the digest format.
+
+## Automatic digest (scheduled)
+If the user wants to receive periodic news:
+1. Configure with `schedule_task`: frequency, preferred time, topics of interest.
+2. On each activation: search, generate compact digest, send via Telegram.
+
+## Topic tracking
+- The user can ask to follow a specific topic.
+- Schedule periodic checking.
+- Only notify if there are new relevant news (don't repeat already reported items).
+
+## Rules
+- ALWAYS cite sources with URLs.
+- Distinguish between reported facts and opinions.
+- If there are contradictory versions, present both.
+- Do not take political sides — present neutrally.
+- Indicate the date of the news (avoid presenting old news as new).
+- For sensitive topics, use careful and factual language.

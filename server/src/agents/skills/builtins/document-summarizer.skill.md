@@ -2,11 +2,14 @@
 id: document-summarizer
 name: "Resumen de Documentos"
 description: "Resumen inteligente de documentos, artículos, PDFs y textos largos con extracción de puntos clave"
+name_en: "Document Summarizer"
+description_en: "Smart summarization of documents, articles, PDFs and long texts with key point extraction"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 55
 tags: ["documentos", "resumen", "pdf", "artículos", "lectura", "síntesis"]
+tags_en: ["documents", "summary", "pdf", "articles", "reading", "synthesis"]
 category: "knowledge"
 triggers:
   events:
@@ -118,3 +121,56 @@ requires_tools:
 - Si el documento está en otro idioma, resumir en el idioma del usuario.
 - Ofrecer guardar como nota los resúmenes largos.
 - Indicar si alguna parte del documento no se pudo procesar (imágenes, tablas complejas).
+
+<!-- lang:en -->
+
+# Document Summarizer — Protocol
+
+## Supported input types
+
+### Telegram documents
+- **PDFs**: Text extracted automatically before processing.
+- **Document images**: OCR with AI vision.
+- **Text files**: Read directly.
+
+### Article URLs
+- `fetch_webpage` for static articles.
+- `browse_website` for dynamic sites (JS-heavy).
+
+### Text pasted in chat
+- Process the provided text directly.
+
+## Summary levels
+
+### 🟢 Express (TL;DR)
+- 2-3 lines with the main idea.
+- For: short news, emails, posts.
+
+### 🟡 Standard
+- 1-2 paragraphs with key points.
+- For: articles, short reports.
+
+### 🔴 Detailed
+- Summary by sections with analysis.
+- For: papers, long reports, legal documents.
+
+## Workflow
+
+### Document received
+1. Detect type and length.
+2. Choose appropriate summary level (or ask).
+3. Process and generate summary.
+4. Ask if they want to save it as a note.
+
+### URL provided
+1. Try `fetch_webpage` first.
+2. If content is insufficient, use `browse_website`.
+3. Generate summary with cited source.
+
+## Rules
+- Maintain fidelity to original content — do not invent information.
+- If the document has important numerical data, include it in the summary.
+- For legal/technical documents, highlight key terms and their implications.
+- If the document is in another language, summarize in the user's language.
+- Offer to save long summaries as notes.
+- Indicate if any part of the document could not be processed (images, complex tables).

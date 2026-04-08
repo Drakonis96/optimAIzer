@@ -2,11 +2,14 @@
 id: system-admin
 name: "Administración del Sistema"
 description: "Administración del sistema operativo: gestión de archivos, procesos, servicios, red y monitorización del sistema"
+name_en: "System Administration"
+description_en: "OS administration: file management, processes, services, network and system monitoring"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 65
 tags: ["sistema", "terminal", "admin", "sysadmin", "archivos", "procesos"]
+tags_en: ["system", "terminal", "admin", "sysadmin", "files", "processes"]
 category: "developer"
 triggers:
   events:
@@ -137,3 +140,71 @@ Comandos ejemplo:
 - Para operaciones destructivas, crear backup primero (si es posible).
 - No guardar outputs con información sensible en notas.
 - Si el usuario no tiene permisos suficientes, explicar cómo obtenerlos (sudo, etc.).
+
+<!-- lang:en -->
+
+# System Administration — Protocol
+
+## ⚠️ Prerequisite
+This skill only works if the agent has permissions for:
+- `terminalAccess: true` (for terminal commands)
+- `codeExecution: true` (for scripts)
+
+Each command/execution REQUIRES user approval via Telegram.
+
+## Capabilities by area
+
+### 📂 File management
+- List, search, copy, move, rename files
+- Check disk space
+- Find large files
+- Compress/decompress
+
+### 🔄 Process management
+- List active processes
+- CPU and memory usage
+- Kill problematic processes
+
+### 🌐 Network
+- Check connectivity
+- View open ports
+- Resolve DNS
+- Network diagnostics
+
+### ⚙️ Services
+- Service status (systemd/launchd)
+- Restart services
+- View logs
+
+### 📊 Monitoring
+- CPU/RAM/Disk usage
+- System uptime
+- Temperature (if available)
+
+## Security protocol
+
+### ALWAYS before executing:
+1. Clearly explain WHAT the command will do.
+2. Explain WHY it's necessary.
+3. Indicate if it has risks or side effects.
+4. Wait for user approval.
+
+### NEVER run without asking:
+- `rm -rf` on critical directories
+- Permission changes on system files
+- Modifications to critical service configs
+- Installation of unsolicited software
+- Commands that expose credentials
+
+### For complex tasks:
+1. Break into small steps.
+2. Ask for approval for each step.
+3. Verify result before continuing.
+4. If something fails, DO NOT automatically retry — inform and ask.
+
+## Rules
+- Adapt commands to the detected OS (macOS/Linux/Windows).
+- Prefer safe and reversible commands.
+- For destructive operations, create backup first (if possible).
+- Do not save outputs with sensitive information in notes.
+- If the user lacks sufficient permissions, explain how to get them (sudo, etc.).

@@ -2,11 +2,14 @@
 id: data-analysis
 name: "Análisis de Datos"
 description: "Análisis y visualización de datos: estadísticas, tendencias, comparaciones y generación de informes"
+name_en: "Data Analysis"
+description_en: "Data analysis and visualization: statistics, trends, comparisons and report generation"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 60
 tags: ["datos", "análisis", "estadísticas", "informes", "python"]
+tags_en: ["data", "analysis", "statistics", "reports", "python"]
 category: "developer"
 triggers:
   events:
@@ -109,3 +112,39 @@ Si code_execution no está habilitado:
 - Usa unidades claras y consistentes.
 - Para datos financieros, respeta la moneda del usuario.
 - Ofrece guardar el informe como nota si el usuario lo desea.
+
+<!-- lang:en -->
+
+# Data Analysis — Protocol
+
+## Capabilities
+This skill allows analyzing data using Python and native tools:
+- Statistical analysis (mean, median, deviation, correlations)
+- Trend and pattern detection
+- Comparisons between data sets
+- Financial and budget calculations
+- Structured report generation
+
+## Workflow
+
+### 1. Data collection
+- From agent notes/lists (`get_notes`, `get_lists`)
+- From user-sent files (Telegram)
+- From web (`web_search`, `fetch_webpage`)
+- Data provided directly in chat
+
+### 2. Analysis with Python (if code_execution enabled)
+Use pandas, numpy, collections for statistical analysis and data processing.
+
+### 3. Analysis without code
+If code_execution is not enabled:
+- Perform mental calculations for small data sets.
+- Use web tools for online calculators.
+- Present data in Markdown table format.
+
+## Rules
+- If data is insufficient for the requested analysis, indicate it and suggest what data is missing.
+- Distinguish between correlation and causation.
+- Use clear and consistent units.
+- For financial data, respect the user's currency.
+- Offer to save the report as a note if desired.

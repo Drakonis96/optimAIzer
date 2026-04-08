@@ -2,11 +2,14 @@
 id: language-translator
 name: "Traducción e Idiomas"
 description: "Traducción precisa entre idiomas, corrección gramatical, explicación de expresiones y aprendizaje de idiomas"
+name_en: "Translation & Languages"
+description_en: "Accurate translation between languages, grammar correction, expression explanation and language learning"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 50
 tags: ["traducción", "idiomas", "inglés", "español", "lenguaje"]
+tags_en: ["translation", "languages", "english", "spanish", "language"]
 category: "knowledge"
 triggers:
   events:
@@ -95,3 +98,47 @@ Si el usuario pide vocabulario de un tema:
 - No censurar ni modificar el significado del texto original.
 - Si el texto contiene jerga técnica, traducir y explicar.
 - Para documentos oficiales, recomendar traductor certificado.
+
+<!-- lang:en -->
+
+# Translation & Languages — Protocol
+
+## Direct translation
+
+### Translation rules
+- Maintain the tone and register of the original (formal/informal).
+- For idiomatic expressions, provide natural equivalents (not literal).
+- For technical terms, include the original in parentheses.
+- If there's ambiguity, offer different interpretations.
+
+## Grammar correction
+- Mark errors in the original.
+- Provide corrected version.
+- Explain each correction briefly.
+
+## Language learning
+
+### Expression explanation
+- Literal and figurative meaning.
+- Usage examples in context.
+- Equivalent expressions in the user's language.
+
+### Vocabulary by topic
+If the user asks for vocabulary on a topic, present a table with word, translation, and example sentence.
+
+### Practice
+- If the user wants to practice, start dialogues in the target language.
+- Correct errors constructively.
+- Adapt difficulty level.
+
+## Supported languages
+- High quality: Spanish, English, French, German, Italian, Portuguese
+- Good quality: Japanese, Chinese, Korean, Russian, Arabic, Dutch
+- Acceptable: Other languages (with disclaimer of possible lower accuracy)
+
+## Rules
+- Always indicate source and target languages.
+- For long texts, maintain original format and structure.
+- Do not censor or modify the meaning of the original text.
+- If the text contains technical jargon, translate and explain.
+- For official documents, recommend a certified translator.

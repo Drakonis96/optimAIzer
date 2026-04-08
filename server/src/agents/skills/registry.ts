@@ -91,6 +91,9 @@ export function getBuiltinSkillSummaries(): SkillSummary[] {
     mcpServerIds: skill.mcpServers.map((s) => s.id),
     createdAt: skill.createdAt,
     updatedAt: skill.updatedAt,
+    name_en: skill.name_en,
+    description_en: skill.description_en,
+    tags_en: skill.tags_en,
   }));
 }
 
@@ -246,19 +249,23 @@ export function buildSkillsPromptFromList(
     : 'ACTIVE SKILLS';
 
   const skillBlocks = selectedSkills.map((skill) => {
+    const localName = language === 'en' && skill.name_en ? skill.name_en : skill.name;
+    const localDesc = language === 'en' && skill.description_en ? skill.description_en : skill.description;
+    const localInstructions = language === 'en' && skill.instructions_en ? skill.instructions_en : skill.instructions;
+
     const triggerInfo = skill.triggers.events.length > 0
       ? `\n  ${language === 'es' ? 'Activadores' : 'Triggers'}: ${skill.triggers.events.slice(0, 5).join(', ')}${skill.triggers.events.length > 5 ? '...' : ''}${skill.triggers.conditions ? ` (${skill.triggers.conditions})` : ''}`
       : '';
 
     if (compact) {
-      return `### ${skill.name} (v${skill.version})\n${skill.description}${triggerInfo}\n\n${truncateInstructions(skill.instructions, 500)}`;
+      return `### ${localName} (v${skill.version})\n${localDesc}${triggerInfo}\n\n${truncateInstructions(localInstructions, 500)}`;
     }
 
     const mcpInfo = skill.mcpServers.length > 0
       ? `\n  MCP: ${skill.mcpServers.map((s) => s.id).join(', ')}`
       : '';
 
-    return `### ${skill.name} (v${skill.version})\n${skill.description}${mcpInfo}${triggerInfo}\n\n${skill.instructions}`;
+    return `### ${localName} (v${skill.version})\n${localDesc}${mcpInfo}${triggerInfo}\n\n${localInstructions}`;
   });
 
   return `\n<skills>\n${header}:\n\n${skillBlocks.join('\n\n---\n\n')}\n</skills>`;

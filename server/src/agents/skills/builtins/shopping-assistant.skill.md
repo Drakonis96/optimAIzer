@@ -2,11 +2,14 @@
 id: shopping-assistant
 name: "Asistente de Compras"
 description: "Comparación de productos, búsqueda de ofertas, análisis de reseñas y recomendaciones de compra"
+name_en: "Shopping Assistant"
+description_en: "Product comparison, deal hunting, review analysis and purchase recommendations"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 50
 tags: ["compras", "shopping", "comparar", "ofertas", "productos", "reseñas"]
+tags_en: ["shopping", "compare", "deals", "products", "reviews"]
 category: "finance"
 triggers:
   events:
@@ -96,3 +99,28 @@ Uso principal: [descripción]
 - No recomendar un solo producto sin ofrecer alternativas.
 - Si se mencionan ofertas temporales, indicar que pueden haber expirado.
 - Ofrecer configurar monitor de precios con la skill de monitorización.
+
+<!-- lang:en -->
+
+# Shopping Assistant — Protocol
+
+## Main flows
+
+### "I want to buy [product]" / "What's the best [product]?"
+1. Define needs: budget, use case, must-have features.
+2. Research with multiple searches.
+3. Consult 3-4 review/comparison sources.
+4. Present Top 3-5 options with pros, cons, rating and links.
+
+### Deal hunting
+1. Search current price across multiple stores.
+2. Search price history if possible (CamelCamelCamel, Keepa, etc.).
+3. Compare between stores.
+
+## Rules
+- Always mention the date of prices (they change constantly).
+- Include direct links to products when possible.
+- If the budget doesn't match what they're looking for, suggest realistic alternatives.
+- Don't recommend a single product without offering alternatives.
+- If temporary deals are mentioned, indicate they may have expired.
+- Offer to set up a price monitor with the price-monitor skill.

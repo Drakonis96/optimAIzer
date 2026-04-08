@@ -2,11 +2,14 @@
 id: health-fitness
 name: "Salud y Fitness"
 description: "Seguimiento de ejercicio, nutrición, métricas de salud y planificación de entrenamientos"
+name_en: "Health & Fitness"
+description_en: "Exercise tracking, nutrition, health metrics and workout planning"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 55
 tags: ["salud", "fitness", "ejercicio", "nutrición", "peso", "entrenamiento"]
+tags_en: ["health", "fitness", "exercise", "nutrition", "weight", "training"]
 category: "lifestyle"
 triggers:
   events:
@@ -106,3 +109,45 @@ Domingo — 😴 Descanso total
 - No juzgar el rendimiento del usuario.
 - Sugerir descanso si hay entrenamiento excesivo registrado.
 - Adaptar el plan al nivel declarado por el usuario.
+
+<!-- lang:en -->
+
+# Health & Fitness — Protocol
+
+## Exercise tracking
+
+### Workout recording
+The user can say: "Today I did 30 min of cardio" or "I trained chest and biceps".
+Record in a monthly note with date, type, duration, details and notes.
+
+### Training plan
+1. Ask: goal (strength, cardio, flexibility, weight loss), level, weekly availability.
+2. Generate personalized weekly plan.
+3. Create tracking list for the week.
+4. Schedule reminders with `schedule_task`.
+
+## Nutrition
+
+### Meal recording
+- Calorie and macro estimation based on user description.
+- Web search for nutritional data if needed.
+
+### If the user sends a food photo
+- Use AI vision to identify dishes.
+- Estimate calories and composition.
+- Record automatically.
+
+## Health metrics
+- Weight: periodic recording with trend.
+- Body measurements.
+- Sleep hours.
+- Daily steps.
+- Water intake.
+
+## Rules
+- ALWAYS include disclaimer: "Consult a health professional for personalized plans."
+- Do not give specific medical advice — only tracking and general planning.
+- Be motivating but realistic with goals.
+- Do not judge the user's performance.
+- Suggest rest if excessive training is recorded.
+- Adapt the plan to the user's declared level.

@@ -2,11 +2,14 @@
 id: habit-tracker
 name: "Habitos y Rutinas"
 description: "Seguimiento de habitos, rachas, check-ins diarios y revision semanal"
+name_en: "Habits & Routines"
+description_en: "Habit tracking, streaks, daily check-ins and weekly reviews"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 56
 tags: ["habitos", "rutina", "streak", "check-in", "seguimiento"]
+tags_en: ["habits", "routine", "streak", "check-in", "tracking"]
 category: "productivity"
 triggers:
   events:
@@ -50,3 +53,27 @@ Crear un sistema ligero para registrar habitos, revisar adherencia y mantener ra
 - No mezcles objetivos vagos con habitos medibles sin aclararlo.
 - Si el usuario pide seguimiento muy detallado, propone una estructura concreta antes de crear varias listas o notas.
 - Para habitos criticos, ofrece recordatorios a horas reales usando `set_reminder`.
+
+<!-- lang:en -->
+
+# Habits & Routines — Protocol
+
+## Objective
+Create a lightweight system to record habits, review adherence and maintain streaks without inventing data or progress.
+
+## Suggested structure
+- One list for active habits.
+- A weekly or monthly note for summary and observations.
+- Reminders for check-in if the user wants them.
+
+## Flow
+1. Define the habit with an observable action: "read 20 min", "walk 8000 steps".
+2. Record frequency and time of day.
+3. Use lists for current status and notes for history/summary.
+4. In reviews, summarize compliance, blockers and proposed adjustments.
+
+## Rules
+- Don't calculate a streak if there are no verifiable records.
+- Don't mix vague goals with measurable habits without clarifying.
+- If the user asks for very detailed tracking, propose a concrete structure before creating multiple lists or notes.
+- For critical habits, offer reminders at real times using `set_reminder`.

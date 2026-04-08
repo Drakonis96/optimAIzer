@@ -2,11 +2,14 @@
 id: content-recommender
 name: "Recomendador de Contenido"
 description: "Recomendaciones personalizadas de peliculas, series, libros y podcasts segun gustos y contexto"
+name_en: "Content Recommender"
+description_en: "Personalized recommendations for movies, series, books and podcasts based on tastes and context"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 55
 tags: ["recomendaciones", "peliculas", "series", "libros", "podcasts"]
+tags_en: ["recommendations", "movies", "series", "books", "podcasts", "entertainment"]
 category: "knowledge"
 triggers:
   events:
@@ -42,3 +45,23 @@ Proponer contenido alineado con gustos, contexto, tiempo disponible y catalogo y
 - No prometas disponibilidad en plataformas concretas sin verificar.
 - Si recomiendas varias opciones, explica brevemente por que encajan.
 - Usa notas o historial previo si el usuario ya ha dicho gustos antes.
+
+<!-- lang:en -->
+
+# Content Recommender — Protocol
+
+## Objective
+Provide personalized recommendations based on user preferences, past likes and current mood.
+
+## Flow
+1. Ask what type of content they want (movie, series, book, podcast).
+2. Gather preferences: genre, mood, length, similar titles they enjoyed.
+3. Research options with `web_search` using multiple sources.
+4. Present 3-5 recommendations with: title, brief description, rating, why they might like it.
+
+## Rules
+- Consider the user's history if known from memory.
+- Include a mix of popular and lesser-known options.
+- Cite sources for ratings and reviews.
+- If the user didn't like a suggestion, adjust future recommendations.
+- Offer to save a "to watch/read" list.

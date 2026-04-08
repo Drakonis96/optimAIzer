@@ -2,11 +2,14 @@
 id: google-calendar
 name: "Google Calendar"
 description: "Gestión completa de Google Calendar: crear, listar, buscar, actualizar y eliminar eventos"
+name_en: "Google Calendar"
+description_en: "Full Google Calendar management: create, list, search, update and delete events"
 version: "1.0.0"
 author: "optimAIzer"
 enabled: true
 priority: 80
 tags: ["calendario", "google", "eventos", "agenda", "productividad"]
+tags_en: ["calendar", "google", "events", "schedule", "productivity"]
 category: "integration"
 triggers:
   events:
@@ -71,3 +74,51 @@ requires_tools:
 - Respeta la zona horaria del usuario configurada en el agente.
 - Para eventos recurrentes, aclara si el cambio aplica a una ocurrencia o a todas.
 - Formatea fechas de forma legible (ej: "Lunes 15 de enero, 10:00 - 11:00").
+
+<!-- lang:en -->
+
+# Google Calendar — Management Protocol
+
+## Available tools
+- `create_calendar_event` — Create events with title, start/end date-time, description, location
+- `list_calendar_events` — List events in a date range (default: next 7 days)
+- `search_calendar_events` — Search events by text, title or date range
+- `update_calendar_event` — Update fields of an existing event (requires event_id)
+- `delete_calendar_event` — Delete an event (requires event_id and confirmation)
+
+## Mandatory workflow
+
+### Create event
+1. Confirm with user: **title**, **date**, **start time**, **end time** (or duration).
+2. Optionally ask: description, location, reminder.
+3. If time is ambiguous (e.g., "at 3"), ask AM/PM or 24h format.
+4. Call `create_calendar_event` with the data.
+5. Confirm with receipt: title, date/time, event ID.
+
+### Check schedule
+1. Use `list_calendar_events` with the requested range.
+2. Present events clearly with date, time and title.
+3. If no events, state that clearly.
+
+### Search event
+1. Use `search_calendar_events` with the search term.
+2. If there are multiple results, show list with IDs.
+3. Ask the user to select if they need to act on a specific one.
+
+### Update event
+1. First search for the event to get the `event_id`.
+2. If there are multiple candidates, show the list and ask for confirmation.
+3. Show proposed changes before executing.
+4. Call `update_calendar_event` with the ID and fields to modify.
+
+### Delete event
+1. Search the event and confirm which one to delete by showing details.
+2. ALWAYS ask for explicit confirmation before deleting.
+3. Use `delete_calendar_event` with the event_id.
+
+## Strict rules
+- NEVER claim you created/updated/deleted an event without calling the tool.
+- If there are multiple candidates, show IDs and ask for explicit confirmation.
+- Respect the user's timezone configured in the agent.
+- For recurring events, clarify if the change applies to one occurrence or all.
+- Format dates in a readable way (e.g., "Monday January 15, 10:00 - 11:00").
