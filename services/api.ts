@@ -346,6 +346,7 @@ export async function sendChatMessage(
     reasoningEffort?: ReasoningEffort;
     tooling?: ToolingOptions;
     requestId?: string;
+    skills?: boolean | string[];
   },
   callbacks: StreamCallbacks,
   signal?: AbortSignal
@@ -1345,4 +1346,67 @@ export async function sendTestWebhookApi(agentId: string): Promise<{ success: bo
   } catch {
     return { success: false, error: 'Connection error' };
   }
+}
+
+// --- Skills API ---
+
+export interface SkillSummaryApi {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  author: string;
+  tags: string[];
+  enabled: boolean;
+  priority: number;
+  category?: string;
+}
+
+export async function getBuiltinSkillsApi(): Promise<SkillSummaryApi[]> {
+  const res = await apiFetch('/agents/skills/builtins');
+  const data = await safeJson(res);
+  return data.skills || [];
+}
+
+export async function getAgentSkillsApi(agentId: string): Promise<SkillSummaryApi[]> {
+  const res = await apiFetch(`/agents/${encodeURIComponent(agentId)}/skills`);
+  const data = await safeJson(res);
+  return data.skills || [];
+}
+
+export async function toggleAgentSkillApi(agentId: string, skillId: string, enabled: boolean): Promise<boolean> {
+  const res = await apiFetch(`/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}/toggle`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+  const data = await safeJson(res);
+  return data.success === true;
+}
+
+export async function installBuiltinSkillApi(agentId: string, skillId: string): Promise<boolean> {
+  const res = await apiFetch(`/agents/${encodeURIComponent(agentId)}/skills/install-builtin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ skillId }),
+  });
+  const data = await safeJson(res);
+  return data.success === true;
+}
+
+export async function installAllBuiltinSkillsApi(agentId: string): Promise<number> {
+  const res = await apiFetch(`/agents/${encodeURIComponent(agentId)}/skills/install-all-builtins`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const data = await safeJson(res);
+  return data.installed || 0;
+}
+
+export async function deleteAgentSkillApi(agentId: string, skillId: string): Promise<boolean> {
+  const res = await apiFetch(`/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}`, {
+    method: 'DELETE',
+  });
+  const data = await safeJson(res);
+  return data.success === true;
 }

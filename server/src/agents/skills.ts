@@ -57,6 +57,8 @@ export interface Skill {
   mcpServers: SkillMCPServer[];
   /** The main instruction body (Markdown content after frontmatter) */
   instructions: string;
+  /** Skill category for grouping (e.g. 'integration', 'productivity', 'finance', etc.) */
+  category?: string;
   /** Raw source file path (if loaded from file) */
   sourcePath?: string;
   /** Creation timestamp */
@@ -74,6 +76,7 @@ export interface SkillSummary {
   tags: string[];
   enabled: boolean;
   priority: number;
+  category?: string;
   triggers: SkillTrigger;
   mcpServerIds: string[];
   createdAt: number;
@@ -312,6 +315,7 @@ export function parseSkillMarkdown(content: string, filename?: string): Skill {
     priority: typeof metadata.priority === 'number' ? metadata.priority : 50,
     triggers,
     mcpServers,
+    category: typeof metadata.category === 'string' ? metadata.category : undefined,
     instructions: body,
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -531,6 +535,9 @@ export function serializeSkillToMarkdown(skill: Skill): string {
   lines.push(`author: "${skill.author}"`);
   lines.push(`enabled: ${skill.enabled}`);
   lines.push(`priority: ${skill.priority}`);
+  if (skill.category) {
+    lines.push(`category: "${skill.category}"`);
+  }
 
   if (skill.tags.length > 0) {
     lines.push(`tags: [${skill.tags.map((t) => `"${t}"`).join(', ')}]`);
@@ -586,6 +593,7 @@ function skillToSummary(skill: Skill): SkillSummary {
     tags: skill.tags,
     enabled: skill.enabled,
     priority: skill.priority,
+    category: skill.category,
     triggers: skill.triggers,
     mcpServerIds: skill.mcpServers.map((s) => s.id),
     createdAt: skill.createdAt,

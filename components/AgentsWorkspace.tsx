@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Clock3,
   Code2,
+  Copy,
   ExternalLink,
   Eye,
   EyeOff,
@@ -16,6 +17,7 @@ import {
   FileText,
   Globe2,
   HelpCircle,
+  House,
   ListChecks,
   Lock,
   Mail,
@@ -40,54 +42,167 @@ import {
   Trash2,
   X,
   Zap,
-  Copy,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getAllModelsForProvider, getDefaultModelForProvider, PROVIDERS } from '../constants';
 import {
-  sendChatMessage,
-  deployAgentApi,
-  stopAgentApi,
-  getAgentStatusApi,
-  getAgentCostsApi,
-  getRunningAgentsApi,
-  verifyTelegramApi,
-  resetAgentMemoryApi,
-  getAgentNotesApi,
-  getAgentListsApi,
-  getAgentSchedulesApi,
+  clearAgentWorkingMemoryApi,
+  deleteAgentListApi,
   deleteAgentNoteApi,
   deleteAgentScheduleApi,
-  deleteAgentListApi,
-  updateAgentScheduleApi,
-  updateAgentBudgetApi,
+  deleteAgentWorkingMemoryEntryApi,
+  deployAgentApi,
   generateWebhookSecretApi,
+  getAgentConversationApi,
+  getAgentCostsApi,
+  getAgentListsApi,
+  getAgentNotesApi,
+  getAgentSchedulesApi,
+  getAgentStatusApi,
+  getAgentWorkingMemoryApi,
+  getAlwaysOnAgentsApi,
+  getRunningAgentsApi,
   getWebhookInfoApi,
+  resetAgentMemoryApi,
+  sendAgentMessageApi,
+  sendChatMessage,
   sendTestWebhookApi,
   setAgentAlwaysOnApi,
-  getAlwaysOnAgentsApi,
-  getAgentConversationApi,
-  sendAgentMessageApi,
-  getAgentWorkingMemoryApi,
-  updateAgentWorkingMemoryEntryApi,
-  deleteAgentWorkingMemoryEntryApi,
-  clearAgentWorkingMemoryApi,
+  stopAgentApi,
+  updateAgentBudgetApi,
   updateAgentRuntimeConfigApi,
+  updateAgentScheduleApi,
+  updateAgentWorkingMemoryEntryApi,
+  verifyTelegramApi,
+  getBuiltinSkillsApi,
+  getAgentSkillsApi,
+    installBuiltinSkillApi,
+  toggleAgentSkillApi,
+  installAllBuiltinSkillsApi,
+  deleteAgentSkillApi,
 } from '../services/api';
 import type {
-  AgentCostSummaryResult,
-  AgentStatusResult,
-  AgentNoteApi,
-  AgentListApi,
-  AgentScheduleApi,
   AgentChatMessage,
+  AgentCostSummaryResult,
+  AgentListApi,
+  AgentNoteApi,
+  AgentScheduleApi,
+  AgentStatusResult,
   AgentWorkingMemoryEntryApi,
+  SkillSummaryApi,
 } from '../services/api';
 import { Language, ModelOption, SystemPrompt } from '../types';
 import { ConfirmationModal } from './ConfirmationModal';
+import { SvgAssetIcon } from './SvgAssetIcon';
 
-type AgentTab = 'general' | 'instructions' | 'permissions' | 'integrations' | 'scheduler' | 'data' | 'memory';
+type WorkspaceSvgIconName =
+  | 'search'
+  | 'browser'
+  | 'playwright'
+  | 'fetch'
+  | 'memory'
+  | 'github'
+  | 'google-drive'
+  | 'slack'
+  | 'notion'
+  | 'postgres'
+  | 'sqlite'
+  | 'filesystem'
+  | 'exa'
+  | 'firecrawl'
+  | 'google-maps'
+  | 'data'
+  | 'communication'
+  | 'productivity'
+  | 'database'
+  | 'google-calendar'
+  | 'icloud-calendar'
+  | 'gmail'
+  | 'radarr'
+  | 'sonarr'
+  | 'home-assistant';
+
+const SVG_ICON_CANDIDATES: Record<WorkspaceSvgIconName, string[]> = {
+  search: ['/svg/search.svg', '/svg/brave-search.svg'],
+  browser: ['/svg/browser.svg', '/svg/web.svg'],
+  playwright: ['/svg/playwright.svg', '/svg/browser.svg'],
+  fetch: ['/svg/fetch.svg', '/svg/data-fetch.svg', '/svg/browser.svg'],
+  memory: ['/svg/memory.svg', '/svg/brain.svg'],
+  github: ['/svg/github.svg'],
+  'google-drive': ['/svg/google-drive.svg', '/svg/drive.svg'],
+  slack: ['/svg/slack.svg'],
+  notion: ['/svg/notion.svg'],
+  postgres: ['/svg/postgres.svg', '/svg/postgresql.svg'],
+  sqlite: ['/svg/sqlite.svg'],
+  filesystem: ['/svg/filesystem.svg', '/svg/folder.svg'],
+  exa: ['/svg/exa.svg', '/svg/search.svg'],
+  firecrawl: ['/svg/firecrawl.svg', '/svg/crawl.svg'],
+  'google-maps': ['/svg/google-maps.svg', '/svg/maps.svg'],
+  data: ['/svg/data.svg', '/svg/chart.svg'],
+  communication: ['/svg/communication.svg', '/svg/chat.svg'],
+  productivity: ['/svg/productivity.svg', '/svg/checklist.svg'],
+  database: ['/svg/database.svg'],
+  'google-calendar': ['/svg/google_calendar.svg', '/svg/google-calendar.svg', '/svg/calendar.svg'],
+  'icloud-calendar': ['/svg/apple_calendar.svg', '/svg/icloud-calendar.svg', '/svg/apple.svg', '/svg/calendar.svg'],
+  gmail: ['/svg/gmail.svg', '/svg/mail.svg'],
+  radarr: ['/svg/radarr.svg', '/svg/media.svg'],
+  sonarr: ['/svg/sonarr.svg', '/svg/media.svg'],
+  'home-assistant': ['/svg/home_assistant.svg', '/svg/home-assistant.svg', '/svg/home.svg'],
+};
+
+const SVG_ICON_FALLBACKS = {
+  search: Search,
+  browser: Globe2,
+  playwright: Monitor,
+  fetch: Globe2,
+  memory: BrainCircuit,
+  github: Code2,
+  'google-drive': FileText,
+  slack: MessageCircle,
+  notion: FileText,
+  postgres: Server,
+  sqlite: Server,
+  filesystem: FileText,
+  exa: Zap,
+  firecrawl: Zap,
+  'google-maps': Globe2,
+  data: FileText,
+  communication: MessageCircle,
+  productivity: ListChecks,
+  database: Server,
+  'google-calendar': Calendar,
+  'icloud-calendar': Calendar,
+  gmail: Mail,
+  radarr: Film,
+  sonarr: Film,
+  'home-assistant': House,
+} as const;
+
+function WorkspaceAssetIcon({
+  icon,
+  label,
+  size = 18,
+  className,
+}: {
+  icon: WorkspaceSvgIconName;
+  label: string;
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <SvgAssetIcon
+      name={icon}
+      alt={label}
+      size={size}
+      className={className}
+      candidates={SVG_ICON_CANDIDATES[icon]}
+      fallbackIcon={SVG_ICON_FALLBACKS[icon]}
+    />
+  );
+}
+
+type AgentTab = 'general' | 'instructions' | 'permissions' | 'integrations' | 'skills' | 'scheduler' | 'data' | 'memory';
 type AgentSection = 'config' | 'chat';
 type AgentStatus = 'draft' | 'active' | 'paused';
 type ScheduleBuilderMode = 'weekly' | 'once';
@@ -519,7 +634,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Privacy-focused web search using Brave API',
     },
     category: 'search',
-    icon: '🔍',
+    icon: 'search',
     configFields: [
       {
         key: 'apiKey',
@@ -547,7 +662,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Automatic browser to open web pages — no config needed',
     },
     category: 'browser',
-    icon: '🌐',
+    icon: 'browser',
     configFields: [],
     setupHelp: {
       es: 'No necesita configuración. Solo activa y listo.',
@@ -562,7 +677,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Advanced browser for web automation — no config needed',
     },
     category: 'browser',
-    icon: '🎭',
+    icon: 'playwright',
     configFields: [],
     setupHelp: {
       es: 'No necesita configuración. Solo activa y listo.',
@@ -577,7 +692,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Download content from any web page — no config needed',
     },
     category: 'data',
-    icon: '📡',
+    icon: 'fetch',
     configFields: [],
     setupHelp: {
       es: 'No necesita configuración. Solo activa y listo.',
@@ -592,7 +707,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Extra memory for the agent across sessions — no config needed',
     },
     category: 'data',
-    icon: '🧠',
+    icon: 'memory',
     configFields: [],
     setupHelp: {
       es: 'No necesita configuración. Solo activa y listo.',
@@ -607,7 +722,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Access GitHub repositories, issues, and PRs',
     },
     category: 'productivity',
-    icon: '🐙',
+    icon: 'github',
     configFields: [
       {
         key: 'token',
@@ -635,7 +750,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Access and manage Google Drive files',
     },
     category: 'productivity',
-    icon: '📁',
+    icon: 'google-drive',
     configFields: [
       {
         key: 'credentials',
@@ -663,7 +778,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Send and read messages in Slack channels',
     },
     category: 'communication',
-    icon: '💬',
+    icon: 'slack',
     configFields: [
       {
         key: 'botToken',
@@ -691,7 +806,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Read and write Notion databases and pages',
     },
     category: 'productivity',
-    icon: '📝',
+    icon: 'notion',
     configFields: [
       {
         key: 'apiKey',
@@ -719,7 +834,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Query PostgreSQL databases',
     },
     category: 'database',
-    icon: '🗄️',
+    icon: 'postgres',
     configFields: [
       {
         key: 'connectionString',
@@ -742,7 +857,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Local SQLite database',
     },
     category: 'database',
-    icon: '💾',
+    icon: 'sqlite',
     configFields: [
       {
         key: 'dbPath',
@@ -765,7 +880,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Read and write files in a secure folder',
     },
     category: 'data',
-    icon: '📂',
+    icon: 'filesystem',
     configFields: [
       {
         key: 'allowedDirs',
@@ -788,7 +903,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'AI-powered smart search — find more relevant results',
     },
     category: 'search',
-    icon: '⚡',
+    icon: 'exa',
     configFields: [
       {
         key: 'apiKey',
@@ -816,7 +931,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Extract structured content from any webpage',
     },
     category: 'browser',
-    icon: '🔥',
+    icon: 'firecrawl',
     configFields: [
       {
         key: 'apiKey',
@@ -840,7 +955,7 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
       en: 'Search addresses, routes, and nearby businesses',
     },
     category: 'data',
-    icon: '🗺️',
+    icon: 'google-maps',
     configFields: [
       {
         key: 'apiKey',
@@ -859,12 +974,12 @@ const MCP_CATALOG: MCPCatalogEntry[] = [
 ];
 
 const MCP_CATEGORIES = {
-  search: { es: 'Búsqueda', en: 'Search', icon: '🔍' },
-  browser: { es: 'Navegador', en: 'Browser', icon: '🌐' },
-  data: { es: 'Datos', en: 'Data', icon: '📊' },
-  communication: { es: 'Comunicación', en: 'Communication', icon: '💬' },
-  productivity: { es: 'Productividad', en: 'Productivity', icon: '📋' },
-  database: { es: 'Base de datos', en: 'Database', icon: '🗄️' },
+  search: { es: 'Búsqueda', en: 'Search', icon: 'search' as WorkspaceSvgIconName },
+  browser: { es: 'Navegador', en: 'Browser', icon: 'browser' as WorkspaceSvgIconName },
+  data: { es: 'Datos', en: 'Data', icon: 'data' as WorkspaceSvgIconName },
+  communication: { es: 'Comunicación', en: 'Communication', icon: 'communication' as WorkspaceSvgIconName },
+  productivity: { es: 'Productividad', en: 'Productivity', icon: 'productivity' as WorkspaceSvgIconName },
+  database: { es: 'Base de datos', en: 'Database', icon: 'database' as WorkspaceSvgIconName },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -886,6 +1001,7 @@ const getCopy = (language: Language) => {
         instructions: 'Instrucciones base',
         permissions: 'Permisos y entorno',
         integrations: 'Integraciones',
+        skills: 'Skills',
         scheduler: 'Scheduler',
         assistant: 'Chat interno',
         data: 'Datos del agente',
@@ -933,7 +1049,7 @@ const getCopy = (language: Language) => {
         guardrailsTitle: 'Seguridad del entorno',
         guardrailsBody:
           'El agente solo puede actuar dentro de los permisos configurados. Cada ejecución de terminal o código requiere aprobación explícita del usuario por Telegram antes de ejecutarse.',
-        systemAccessTitle: '⚠️ Acceso al sistema activado',
+        systemAccessTitle: 'Acceso al sistema activado',
         systemAccessBody:
           'Has activado permisos que permiten al agente interactuar con el sistema operativo. El agente pedirá autorización antes de cada acción, pero ten cuidado con los comandos que apruebas. Usa esto solo en entornos controlados.',
       },
@@ -967,8 +1083,8 @@ const getCopy = (language: Language) => {
         webhookUrlInfo: 'Usa esta URL en la configuración de webhooks del servicio externo.',
         webhookCopied: '¡Copiado!',
         webhookTestSend: 'Enviar evento de prueba',
-        webhookTestSuccess: '✅ Evento de prueba enviado correctamente',
-        webhookTestError: '❌ Error al enviar evento de prueba',
+        webhookTestSuccess: 'Evento de prueba enviado correctamente',
+        webhookTestError: 'Error al enviar evento de prueba',
         telegramSteps: [
           '1) Crea un bot con @BotFather y copia el token.',
           '2) Añade el token aquí y guarda.',
@@ -1104,6 +1220,7 @@ const getCopy = (language: Language) => {
       instructions: 'Base instructions',
       permissions: 'Permissions & environment',
       integrations: 'Integrations',
+      skills: 'Skills',
       scheduler: 'Scheduler',
       data: 'Agent data',
       memory: 'Memory',
@@ -1150,7 +1267,7 @@ const getCopy = (language: Language) => {
       guardrailsTitle: 'Environment security',
       guardrailsBody:
         'The agent can only act within the configured permissions. Every terminal or code execution requires explicit user approval via Telegram before running.',
-      systemAccessTitle: '⚠️ System access enabled',
+      systemAccessTitle: 'System access enabled',
       systemAccessBody:
         'You have enabled permissions that allow the agent to interact with the operating system. The agent will request authorization before each action, but be careful with the commands you approve. Use this only in controlled environments.',
     },
@@ -1184,8 +1301,8 @@ const getCopy = (language: Language) => {
       webhookUrlInfo: 'Use this URL in the external service\'s webhook configuration.',
       webhookCopied: 'Copied!',
       webhookTestSend: 'Send test event',
-      webhookTestSuccess: '✅ Test event sent successfully',
-      webhookTestError: '❌ Error sending test event',
+      webhookTestSuccess: 'Test event sent successfully',
+      webhookTestError: 'Error sending test event',
       telegramSteps: [
         '1) Create a bot with @BotFather and copy the token.',
         '2) Paste the token here and save.',
@@ -2020,7 +2137,7 @@ const MCPMarketplace: React.FC<{
             return (
               <div key={server.id} className="rounded-lg border border-border p-3 bg-background/50 space-y-2">
                 <div className="flex items-center gap-3">
-                  <span className="text-lg">{catalogEntry.icon}</span>
+                  <WorkspaceAssetIcon icon={catalogEntry.icon} label={catalogEntry.name} size={20} className="text-zinc-500 dark:text-zinc-300" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{catalogEntry.name}</p>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
@@ -2164,7 +2281,10 @@ const MCPMarketplace: React.FC<{
                   : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
               }`}
             >
-              {cat.icon} {cat[lang]}
+              <span className="inline-flex items-center gap-1.5">
+                <WorkspaceAssetIcon icon={cat.icon} label={cat[lang]} size={14} className="text-current" />
+                {cat[lang]}
+              </span>
             </button>
           ))}
         </div>
@@ -2178,7 +2298,7 @@ const MCPMarketplace: React.FC<{
             className="rounded-lg border border-border p-3 hover:border-primary/40 transition-colors bg-background/50"
           >
             <div className="flex items-start gap-2.5">
-              <span className="text-lg mt-0.5">{entry.icon}</span>
+              <WorkspaceAssetIcon icon={entry.icon} label={entry.name} size={20} className="mt-0.5 text-zinc-500 dark:text-zinc-300" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{entry.name}</p>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -2311,6 +2431,13 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
   const [agentWorkingMemory, setAgentWorkingMemory] = useState<AgentWorkingMemoryEntryApi[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isLoadingWorkingMemory, setIsLoadingWorkingMemory] = useState(false);
+  // Skills state
+  const [builtinSkills, setBuiltinSkills] = useState<SkillSummaryApi[]>([]);
+  const [agentSkills, setAgentSkills] = useState<SkillSummaryApi[]>([]);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
+  const [isInstallingAllSkills, setIsInstallingAllSkills] = useState(false);
+  const [skillsFilter, setSkillsFilter] = useState('');
+  const [skillsCategoryFilter, setSkillsCategoryFilter] = useState<string>('all');
   const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null);
   const [editingMemoryLabel, setEditingMemoryLabel] = useState('');
   const [editingMemoryContent, setEditingMemoryContent] = useState('');
@@ -2473,6 +2600,67 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
     };
   }, [activeAgent?.id, activeTab, language]);
 
+  // Fetch skills when skills tab is active
+  useEffect(() => {
+    if (!activeAgent || activeTab !== 'skills') return;
+    let mounted = true;
+    const fetchSkills = async () => {
+      setIsLoadingSkills(true);
+      try {
+        const [builtin, installed] = await Promise.all([
+          getBuiltinSkillsApi().catch((err) => { console.error('[Skills] Failed to load builtins:', err); return [] as SkillSummaryApi[]; }),
+          getAgentSkillsApi(activeAgent.id).catch((err) => { console.error('[Skills] Failed to load agent skills:', err); return [] as SkillSummaryApi[]; }),
+        ]);
+        if (!mounted) return;
+        setBuiltinSkills(builtin);
+        setAgentSkills(installed);
+      } catch (err) {
+        console.error('[Skills] Unexpected error:', err);
+      } finally {
+        if (mounted) setIsLoadingSkills(false);
+      }
+    };
+    fetchSkills();
+    return () => { mounted = false; };
+  }, [activeAgent?.id, activeTab]);
+
+  const handleInstallAllSkills = async () => {
+    if (!activeAgent) return;
+    setIsInstallingAllSkills(true);
+    try {
+      await installAllBuiltinSkillsApi(activeAgent.id);
+      const installed = await getAgentSkillsApi(activeAgent.id).catch(() => [] as SkillSummaryApi[]);
+      setAgentSkills(installed);
+    } finally {
+      setIsInstallingAllSkills(false);
+    }
+  };
+
+  const handleInstallSingleSkill = async (skillId: string) => {
+    if (!activeAgent) return;
+    try {
+      const ok = await installBuiltinSkillApi(activeAgent.id, skillId);
+      if (ok) {
+        const installed = await getAgentSkillsApi(activeAgent.id).catch(() => [] as SkillSummaryApi[]);
+        setAgentSkills(installed);
+      }
+    } catch (err) {
+      console.error('[Skills] Install failed:', err);
+    }
+  };
+
+  const handleToggleSkill = async (skillId: string, enabled: boolean) => {
+    if (!activeAgent) return;
+    await toggleAgentSkillApi(activeAgent.id, skillId, enabled);
+    setAgentSkills((prev) => prev.map((s) => s.id === skillId ? { ...s, enabled } : s));
+  };
+
+  const handleDeleteSkill = async (skillId: string) => {
+    if (!activeAgent) return;
+    await deleteAgentSkillApi(activeAgent.id, skillId);
+    setAgentSkills((prev) => prev.filter((s) => s.id !== skillId));
+  };
+
   const requestDeleteNote = (noteId: string) => setPendingDelete({ type: 'note', id: noteId });
   const requestDeleteList = (listId: string) => setPendingDelete({ type: 'list', id: listId });
   const requestDeleteSchedule = (scheduleId: string) => setPendingDelete({ type: 'schedule', id: scheduleId });
@@ -2588,7 +2776,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
             ? 'No se pudo verificar Telegram. Revisa bot token y chat ID.'
             : 'Could not verify Telegram. Check bot token and chat ID.');
         setDeployError(verifyError);
-        setTelegramVerifyResult(`❌ ${verifyError}`);
+        setTelegramVerifyResult(verifyError);
         updateActiveAgent((agent) => ({
           ...agent,
           integrations: {
@@ -2606,7 +2794,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
           telegram: { ...agent.integrations.telegram, verified: true },
         },
       }));
-      setTelegramVerifyResult(verify.message || `✅ Bot @${verify.botName} verificado`);
+      setTelegramVerifyResult(verify.message || `Bot @${verify.botName} verificado`);
 
       const result = await deployAgentApi(activeAgent);
       if (result.success) {
@@ -2748,7 +2936,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
         activeAgent.integrations.telegram.chatId || undefined
       );
       if (!result.valid) {
-        setTelegramVerifyResult(`❌ ${result.error || 'Verificación fallida'}`);
+        setTelegramVerifyResult(result.error || 'Verificación fallida');
         updateActiveAgent((agent) => ({
           ...agent,
           integrations: {
@@ -2760,7 +2948,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
       }
 
       if (hasChatId && !result.chatIdValid) {
-        setTelegramVerifyResult(`❌ ${result.error || 'Chat ID inválido o inaccesible para el bot.'}`);
+        setTelegramVerifyResult(result.error || 'Chat ID inválido o inaccesible para el bot.');
         updateActiveAgent((agent) => ({
           ...agent,
           integrations: {
@@ -2771,7 +2959,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
         return;
       }
 
-      setTelegramVerifyResult(result.message || `✅ Bot @${result.botName} verificado`);
+      setTelegramVerifyResult(result.message || `Bot @${result.botName} verificado`);
       updateActiveAgent((agent) => ({
         ...agent,
         integrations: {
@@ -2780,7 +2968,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
         },
       }));
     } catch (error: any) {
-      setTelegramVerifyResult(`❌ Error: ${error.message}`);
+      setTelegramVerifyResult(`Error: ${error.message}`);
     } finally {
       setIsVerifyingTelegram(false);
     }
@@ -2794,7 +2982,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
       const url = activeAgent.integrations.media?.radarr?.url;
       const apiKey = activeAgent.integrations.media?.radarr?.apiKey;
       if (!url || !apiKey) {
-        setRadarrTestResult(language === 'es' ? '❌ URL y API Key son obligatorios' : '❌ URL and API Key are required');
+        setRadarrTestResult(language === 'es' ? 'URL y API Key son obligatorios' : 'URL and API Key are required');
         return;
       }
       const res = await fetch('/api/agents/media/test-radarr', {
@@ -2805,12 +2993,12 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
       });
       const data = await res.json();
       if (data.success) {
-        setRadarrTestResult(`✅ Radarr v${data.version} — ${language === 'es' ? 'Conexión exitosa' : 'Connection successful'}`);
+        setRadarrTestResult(`Radarr v${data.version} — ${language === 'es' ? 'Conexión exitosa' : 'Connection successful'}`);
       } else {
-        setRadarrTestResult(`❌ ${data.error || 'Connection failed'}`);
+        setRadarrTestResult(data.error || 'Connection failed');
       }
     } catch (error: any) {
-      setRadarrTestResult(`❌ Error: ${error.message}`);
+      setRadarrTestResult(`Error: ${error.message}`);
     } finally {
       setIsTestingRadarr(false);
     }
@@ -2824,7 +3012,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
       const url = activeAgent.integrations.media?.sonarr?.url;
       const apiKey = activeAgent.integrations.media?.sonarr?.apiKey;
       if (!url || !apiKey) {
-        setSonarrTestResult(language === 'es' ? '❌ URL y API Key son obligatorios' : '❌ URL and API Key are required');
+        setSonarrTestResult(language === 'es' ? 'URL y API Key son obligatorios' : 'URL and API Key are required');
         return;
       }
       const res = await fetch('/api/agents/media/test-sonarr', {
@@ -2835,12 +3023,12 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
       });
       const data = await res.json();
       if (data.success) {
-        setSonarrTestResult(`✅ Sonarr v${data.version} — ${language === 'es' ? 'Conexión exitosa' : 'Connection successful'}`);
+        setSonarrTestResult(`Sonarr v${data.version} — ${language === 'es' ? 'Conexión exitosa' : 'Connection successful'}`);
       } else {
-        setSonarrTestResult(`❌ ${data.error || 'Connection failed'}`);
+        setSonarrTestResult(data.error || 'Connection failed');
       }
     } catch (error: any) {
-      setSonarrTestResult(`❌ Error: ${error.message}`);
+      setSonarrTestResult(`Error: ${error.message}`);
     } finally {
       setIsTestingSonarr(false);
     }
@@ -2854,7 +3042,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
       const url = activeAgent.integrations.homeAssistant?.url;
       const token = activeAgent.integrations.homeAssistant?.token;
       if (!url || !token) {
-        setHATestResult(language === 'es' ? '❌ URL y Token son obligatorios' : '❌ URL and Token are required');
+        setHATestResult(language === 'es' ? 'URL y Token son obligatorios' : 'URL and Token are required');
         return;
       }
       const res = await fetch('/api/agents/homeassistant/test', {
@@ -2865,12 +3053,12 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
       });
       const data = await res.json();
       if (data.success) {
-        setHATestResult(`✅ Home Assistant v${data.version} — ${data.locationName || ''} — ${language === 'es' ? 'Conexión exitosa' : 'Connection successful'}`);
+        setHATestResult(`Home Assistant v${data.version} — ${data.locationName || ''} — ${language === 'es' ? 'Conexión exitosa' : 'Connection successful'}`);
       } else {
-        setHATestResult(`❌ ${data.error || 'Connection failed'}`);
+        setHATestResult(data.error || 'Connection failed');
       }
     } catch (error: any) {
-      setHATestResult(`❌ Error: ${error.message}`);
+      setHATestResult(`Error: ${error.message}`);
     } finally {
       setIsTestingHA(false);
     }
@@ -2894,9 +3082,9 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
         language === 'es'
           ? `Mensajes persistidos eliminados: ${result.clearedPersistentMessages}.`
           : `Persisted messages deleted: ${result.clearedPersistentMessages}.`;
-      setMemoryResetResult(`✅ ${copy.assistant.resetMemorySuccess} ${details}`);
+      setMemoryResetResult(`${copy.assistant.resetMemorySuccess} ${details}`);
     } catch (error: any) {
-      setMemoryResetResult(`❌ ${error?.message || copy.assistant.resetMemoryError}`);
+      setMemoryResetResult(error?.message || copy.assistant.resetMemoryError);
     } finally {
       setIsResettingMemory(false);
     }
@@ -3431,7 +3619,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                 const errorLabel = language === 'es' ? 'Error de configuración' : 'Setup error';
                 return {
                   ...message,
-                  content: `${base}${base ? '\n\n' : ''}⚠️ ${errorLabel}: ${error}`,
+                  content: `${base}${base ? '\n\n' : ''}${errorLabel}: ${error}`,
                 };
               }),
             }));
@@ -3450,7 +3638,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
             message.id === assistantMsgId
               ? {
                   ...message,
-                  content: `⚠️ ${fallbackError}`,
+                  content: fallbackError,
                 }
               : message
           ),
@@ -3476,6 +3664,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
     { id: 'instructions', label: copy.tabs.instructions },
     { id: 'permissions', label: copy.tabs.permissions },
     { id: 'integrations', label: copy.tabs.integrations },
+    { id: 'skills', label: copy.tabs.skills },
     { id: 'scheduler', label: copy.tabs.scheduler },
     { id: 'data', label: copy.tabs.data },
     { id: 'memory', label: copy.tabs.memory },
@@ -3642,12 +3831,12 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
               {isAgentDeployed && agentStatus && (
                 <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
                   {isStopping
-                    ? (language === 'es' ? '⏳ Deteniendo agente...' : '⏳ Stopping agent...')
+                    ? (language === 'es' ? 'Deteniendo agente...' : 'Stopping agent...')
                     : isRestarting
-                    ? (language === 'es' ? '🔄 Reiniciando agente...' : '🔄 Restarting agent...')
+                    ? (language === 'es' ? 'Reiniciando agente...' : 'Restarting agent...')
                     : agentStatus.isProcessing
-                    ? (language === 'es' ? '⚡ Procesando...' : '⚡ Processing...')
-                    : `📨 ${agentStatus.historyLength} msgs | 📅 ${agentStatus.dynamicSchedules} tasks | 🧠 ${agentStatus.memorySize} mem`
+                    ? (language === 'es' ? 'Procesando...' : 'Processing...')
+                    : `${agentStatus.historyLength} msgs | ${agentStatus.dynamicSchedules} tasks | ${agentStatus.memorySize} mem`
                   }
                 </span>
               )}
@@ -3849,7 +4038,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
           {/* Daily Budget Control */}
           <div className="mt-3 rounded-xl border border-border bg-background/40 p-3">
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              💰 {copy.budget.title}
+              <Shield size={14} /> {copy.budget.title}
             </h3>
             <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
               {copy.budget.description}
@@ -3893,7 +4082,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
               <div className="text-right">
                 {activeAgent.dailyBudgetUsd > 0 ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/20 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                    🛡️ {copy.budget.active}: ${activeAgent.dailyBudgetUsd.toFixed(2)}/day
+                    <Shield size={12} /> {copy.budget.active}: ${activeAgent.dailyBudgetUsd.toFixed(2)}/day
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
@@ -3929,7 +4118,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
           {/* Timezone */}
           <div className="mt-3 rounded-xl border border-border bg-background/40 p-3">
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              🌍 {copy.timezone.title}
+              <Globe2 size={14} /> {copy.timezone.title}
             </h3>
             <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
               {copy.timezone.description}
@@ -3982,7 +4171,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                     const now = new Date();
                     return now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', timeZone: activeAgent.timezone, timeZoneName: 'short' });
                   } catch {
-                    return '⚠️';
+                    return 'N/A';
                   }
                 })()}
               </span>
@@ -3992,7 +4181,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
           {/* Runtime tuning */}
           <div className="mt-3 rounded-xl border border-border bg-background/40 p-3 space-y-3">
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              ⚡ {copy.performance.title}
+              <Zap size={14} /> {copy.performance.title}
             </h3>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{copy.performance.description}</p>
 
@@ -4586,7 +4775,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                       >
                         {isVerifyingTelegram
                           ? (language === 'es' ? 'Verificando...' : 'Verifying...')
-                          : (language === 'es' ? '🔍 Verificar conexión' : '🔍 Verify connection')
+                          : (language === 'es' ? 'Verificar conexión' : 'Verify connection')
                         }
                       </button>
 
@@ -4809,7 +4998,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                   <div className={`rounded-lg border p-3 space-y-2 transition-colors ${selectedCalendarProvider && selectedCalendarProvider !== 'google' ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-100/70 dark:bg-zinc-900/30 opacity-70' : 'border-border'}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">📅</span>
+                        <WorkspaceAssetIcon icon="google-calendar" label="Google Calendar" size={20} className="text-zinc-500 dark:text-zinc-300" />
                         <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Google Calendar</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -4900,8 +5089,8 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                         </div>
                         <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                           {language === 'es'
-                            ? '💡 Necesitas crear credenciales OAuth2 en Google Cloud Console → APIs → Calendar API. Luego obtén el refresh token con el flujo de autorización.'
-                            : '💡 Create OAuth2 credentials in Google Cloud Console → APIs → Calendar API. Then obtain the refresh token via the authorization flow.'}
+                            ? 'Necesitas crear credenciales OAuth2 en Google Cloud Console → APIs → Calendar API. Luego obtén el refresh token con el flujo de autorización.'
+                            : 'Create OAuth2 credentials in Google Cloud Console → APIs → Calendar API. Then obtain the refresh token via the authorization flow.'}
                         </p>
                       </div>
                     )}
@@ -4911,7 +5100,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                   <div className={`rounded-lg border p-3 space-y-2 transition-colors ${selectedCalendarProvider && selectedCalendarProvider !== 'icloud' ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-100/70 dark:bg-zinc-900/30 opacity-70' : 'border-border'}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">🍎</span>
+                        <WorkspaceAssetIcon icon="icloud-calendar" label="iCloud Calendar" size={20} className="text-zinc-500 dark:text-zinc-300" />
                         <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">iCloud Calendar</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -4993,8 +5182,8 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                         </div>
                         <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                           {language === 'es'
-                            ? '💡 Ve a appleid.apple.com → Seguridad → Contraseñas de apps → Generar. No uses tu contraseña normal de Apple.'
-                            : '💡 Go to appleid.apple.com → Security → App-Specific Passwords → Generate. Do not use your regular Apple password.'}
+                            ? 'Ve a appleid.apple.com → Seguridad → Contraseñas de apps → Generar. No uses tu contraseña normal de Apple.'
+                            : 'Go to appleid.apple.com → Security → App-Specific Passwords → Generate. Do not use your regular Apple password.'}
                         </p>
                       </div>
                     )}
@@ -5003,99 +5192,92 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
 
                 {/* Gmail Integration */}
                 <div className="rounded-xl border border-border p-3 space-y-3">
-                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                    <Mail size={15} />
-                    Gmail
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <WorkspaceAssetIcon icon="gmail" label="Gmail" size={20} className="text-zinc-500 dark:text-zinc-300" />
+                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Gmail</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 dark:text-zinc-300">
+                        <input
+                          type="checkbox"
+                          checked={activeAgent.integrations.gmail !== undefined}
+                          onChange={(event) => {
+                            if (event.target.checked) {
+                              updateActiveAgent((a) => ({
+                                ...a,
+                                integrations: {
+                                  ...a.integrations,
+                                  gmail: a.integrations.gmail || { clientId: '', clientSecret: '', refreshToken: '' },
+                                },
+                              }));
+                              setGmailExpanded(true);
+                            } else {
+                              updateActiveAgent((a) => ({
+                                ...a,
+                                integrations: { ...a.integrations, gmail: undefined },
+                              }));
+                              setGmailExpanded(false);
+                              setGmailTestResult(null);
+                            }
+                          }}
+                          className="rounded border-zinc-300 dark:border-zinc-700 text-primary focus:ring-primary"
+                        />
+                        {language === 'es' ? 'Activar' : 'Enable'}
+                      </label>
+                      {activeAgent.integrations.gmail !== undefined && (
+                        <button
+                          onClick={() => setGmailExpanded(!gmailExpanded)}
+                          className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-border text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        >
+                          {gmailExpanded
+                            ? (language === 'es' ? 'Ocultar' : 'Hide')
+                            : (language === 'es' ? 'Configurar' : 'Configure')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {language === 'es'
                       ? 'Conecta tu cuenta de Gmail para que el agente pueda leer, buscar y enviar correos electrónicos en tu nombre.'
                       : 'Connect your Gmail account so the agent can read, search and send emails on your behalf.'}
                   </p>
 
-                  {/* Security Warning */}
-                  <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                          {language === 'es' ? '⚠️ Lee esto antes de continuar' : '⚠️ Read this before continuing'}
-                        </p>
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
-                          {language === 'es'
-                            ? 'Al conectar Gmail, le das al agente acceso para leer todos tus correos, buscar mensajes y enviar emails desde tu cuenta. Esto significa que:'
-                            : 'By connecting Gmail, you give the agent access to read all your emails, search messages and send emails from your account. This means:'}
-                        </p>
-                        <ul className="text-[11px] text-amber-700 dark:text-amber-400 list-disc pl-4 space-y-0.5">
-                          <li>{language === 'es' ? 'El agente podrá ver el contenido de tus correos (incluidos datos personales, contraseñas, etc.)' : 'The agent will be able to see your email content (including personal data, passwords, etc.)'}</li>
-                          <li>{language === 'es' ? 'El agente podrá enviar correos en tu nombre si se lo pides' : 'The agent can send emails on your behalf if you ask it to'}</li>
-                          <li>{language === 'es' ? 'Los correos enviados por el agente vendrán de tu dirección real' : 'Emails sent by the agent will come from your real address'}</li>
-                          <li>{language === 'es' ? 'Revoca el acceso en cualquier momento desde myaccount.google.com/permissions' : 'Revoke access at any time from myaccount.google.com/permissions'}</li>
-                        </ul>
-                        <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium mt-1">
-                          {language === 'es'
-                            ? '💡 Consejo: Usa una cuenta de correo secundaria si no quieres exponer tu correo principal.'
-                            : '💡 Tip: Use a secondary email account if you don\'t want to expose your main inbox.'}
-                        </p>
+                  {activeAgent.integrations.gmail !== undefined && gmailExpanded && (
+                    <div className="grid gap-2 pt-2 border-t border-border">
+                      {/* Security Warning */}
+                      <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                              {language === 'es' ? 'Lee esto antes de continuar' : 'Read this before continuing'}
+                            </p>
+                            <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                              {language === 'es'
+                                ? 'Al conectar Gmail, le das al agente acceso para leer todos tus correos, buscar mensajes y enviar emails desde tu cuenta. Esto significa que:'
+                                : 'By connecting Gmail, you give the agent access to read all your emails, search messages and send emails from your account. This means:'}
+                            </p>
+                            <ul className="text-[11px] text-amber-700 dark:text-amber-400 list-disc pl-4 space-y-0.5">
+                              <li>{language === 'es' ? 'El agente podrá ver el contenido de tus correos (incluidos datos personales, contraseñas, etc.)' : 'The agent will be able to see your email content (including personal data, passwords, etc.)'}</li>
+                              <li>{language === 'es' ? 'El agente podrá enviar correos en tu nombre si se lo pides' : 'The agent can send emails on your behalf if you ask it to'}</li>
+                              <li>{language === 'es' ? 'Los correos enviados por el agente vendrán de tu dirección real' : 'Emails sent by the agent will come from your real address'}</li>
+                              <li>{language === 'es' ? 'Revoca el acceso en cualquier momento desde myaccount.google.com/permissions' : 'Revoke access at any time from myaccount.google.com/permissions'}</li>
+                            </ul>
+                            <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium mt-1">
+                              {language === 'es'
+                                ? 'Consejo: Usa una cuenta de correo secundaria si no quieres exponer tu correo principal.'
+                                : 'Tip: Use a secondary email account if you don\'t want to expose your main inbox.'}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Gmail Enable/Disable */}
-                  <div className="rounded-lg border border-border p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">📧</span>
-                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Gmail</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 dark:text-zinc-300">
-                          <input
-                            type="checkbox"
-                            checked={activeAgent.integrations.gmail !== undefined}
-                            onChange={(event) => {
-                              if (event.target.checked) {
-                                updateActiveAgent((a) => ({
-                                  ...a,
-                                  integrations: {
-                                    ...a.integrations,
-                                    gmail: a.integrations.gmail || { clientId: '', clientSecret: '', refreshToken: '' },
-                                  },
-                                }));
-                                setGmailExpanded(true);
-                              } else {
-                                updateActiveAgent((a) => ({
-                                  ...a,
-                                  integrations: { ...a.integrations, gmail: undefined },
-                                }));
-                                setGmailExpanded(false);
-                                setGmailTestResult(null);
-                              }
-                            }}
-                            className="rounded border-zinc-300 dark:border-zinc-700 text-primary focus:ring-primary"
-                          />
-                          {language === 'es' ? 'Activar' : 'Enable'}
-                        </label>
-                        {activeAgent.integrations.gmail !== undefined && (
-                          <button
-                            onClick={() => setGmailExpanded(!gmailExpanded)}
-                            className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-border text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                          >
-                            {gmailExpanded
-                              ? (language === 'es' ? 'Ocultar' : 'Hide')
-                              : (language === 'es' ? 'Configurar' : 'Configure')}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {activeAgent.integrations.gmail !== undefined && gmailExpanded && (
-                      <div className="grid gap-2 pt-2 border-t border-border">
-                        {/* Setup Instructions */}
-                        <div className="rounded-md bg-zinc-50 dark:bg-zinc-900/50 border border-border p-3 space-y-2">
-                          <p className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
-                            {language === 'es' ? '📋 Cómo obtener las credenciales:' : '📋 How to get credentials:'}
-                          </p>
+                      {/* Setup Instructions */}
+                      <div className="rounded-md bg-zinc-50 dark:bg-zinc-900/50 border border-border p-3 space-y-2">
+                        <p className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
+                          <span className="inline-flex items-center gap-1.5"><ListChecks size={12} />{language === 'es' ? 'Cómo obtener las credenciales:' : 'How to get credentials:'}</span>
+                        </p>
                           <ol className="text-[10px] text-zinc-600 dark:text-zinc-400 space-y-1.5 list-decimal pl-4 leading-relaxed">
                             <li>
                               {language === 'es'
@@ -5134,8 +5316,8 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                           </ol>
                           <div className="rounded-md border border-amber-300/60 dark:border-amber-500/40 bg-amber-50/70 dark:bg-amber-950/20 px-2.5 py-2 text-[10px] text-amber-900 dark:text-amber-200 leading-relaxed">
                             {language === 'es'
-                              ? <>⚠️ Si aparece <strong>Error 403: access_denied</strong>, ve a Google Cloud Console → <strong>API y servicios</strong> → <strong>Pantalla de consentimiento OAuth</strong>. Ahí cambia a <strong>Público</strong> y luego pulsa <strong>Publicar app</strong>, o añade tu cuenta en <strong>Usuarios de prueba</strong>.</>
-                              : <>⚠️ If you see <strong>Error 403: access_denied</strong>, go to Google Cloud Console → <strong>APIs & Services</strong> → <strong>OAuth consent screen</strong>. There, switch to <strong>Public</strong> and then click <strong>Publish app</strong>, or add your account under <strong>Test users</strong>.</>}
+                              ? <>Si aparece <strong>Error 403: access_denied</strong>, ve a Google Cloud Console → <strong>API y servicios</strong> → <strong>Pantalla de consentimiento OAuth</strong>. Ahí cambia a <strong>Público</strong> y luego pulsa <strong>Publicar app</strong>, o añade tu cuenta en <strong>Usuarios de prueba</strong>.</>
+                              : <>If you see <strong>Error 403: access_denied</strong>, go to Google Cloud Console → <strong>APIs & Services</strong> → <strong>OAuth consent screen</strong>. There, switch to <strong>Public</strong> and then click <strong>Publish app</strong>, or add your account under <strong>Test users</strong>.</>}
                           </div>
                         </div>
 
@@ -5197,7 +5379,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
 
                                   // 2. Open popup
                                   const popup = window.open(authUrl, 'gmail-oauth', 'width=600,height=700,left=200,top=100');
-                                  if (!popup) { setGmailTestResult(language === 'es' ? '❌ No se pudo abrir la ventana. Permite las ventanas emergentes.' : '❌ Popup blocked. Please allow popups.'); setGmailAuthLoading(false); return; }
+                                  if (!popup) { setGmailTestResult(language === 'es' ? 'No se pudo abrir la ventana. Permite las ventanas emergentes.' : 'Popup blocked. Please allow popups.'); setGmailAuthLoading(false); return; }
 
                                   // 3. Listen for callback message
                                   const handler = async (event: MessageEvent) => {
@@ -5209,11 +5391,11 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                                       if (error === 'access_denied') {
                                         setGmailTestResult(
                                           language === 'es'
-                                            ? '❌ Acceso denegado por Google (403). Ve a API y servicios → Pantalla de consentimiento OAuth, publica la app (Público) o añade tu cuenta en Usuarios de prueba.'
-                                            : '❌ Access denied by Google (403). Go to APIs & Services → OAuth consent screen, publish the app (Public), or add your account under Test users.'
+                                            ? 'Acceso denegado por Google (403). Ve a API y servicios → Pantalla de consentimiento OAuth, publica la app (Público) o añade tu cuenta en Usuarios de prueba.'
+                                            : 'Access denied by Google (403). Go to APIs & Services → OAuth consent screen, publish the app (Public), or add your account under Test users.'
                                         );
                                       } else {
-                                        setGmailTestResult(`❌ ${error || (language === 'es' ? 'Autorización cancelada' : 'Authorization cancelled')}`);
+                                        setGmailTestResult(error || (language === 'es' ? 'Autorización cancelada' : 'Authorization cancelled'));
                                       }
                                       setGmailAuthLoading(false);
                                       return;
@@ -5236,12 +5418,12 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                                           ...a,
                                           integrations: { ...a.integrations, gmail: { ...a.integrations.gmail!, refreshToken: exchData.refreshToken } },
                                         }));
-                                        setGmailTestResult(language === 'es' ? '✅ Gmail autorizado correctamente. Refresh Token guardado.' : '✅ Gmail authorized. Refresh Token saved.');
+                                        setGmailTestResult(language === 'es' ? 'Gmail autorizado correctamente. Refresh Token guardado.' : 'Gmail authorized. Refresh Token saved.');
                                       } else {
-                                        setGmailTestResult(`❌ ${exchData.error || (language === 'es' ? 'No se recibió el Refresh Token' : 'Refresh Token not received')}`);
+                                        setGmailTestResult(exchData.error || (language === 'es' ? 'No se recibió el Refresh Token' : 'Refresh Token not received'));
                                       }
                                     } catch (exchErr: any) {
-                                      setGmailTestResult(`❌ ${exchErr.message || (language === 'es' ? 'Error al intercambiar el código' : 'Code exchange failed')}`);
+                                      setGmailTestResult(exchErr.message || (language === 'es' ? 'Error al intercambiar el código' : 'Code exchange failed'));
                                     } finally {
                                       setGmailAuthLoading(false);
                                     }
@@ -5260,7 +5442,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                                     }
                                   }, 500);
                                 } catch (err: any) {
-                                  setGmailTestResult(`❌ ${err.message || (language === 'es' ? 'Error al iniciar autorización' : 'Failed to start authorization')}`);
+                                  setGmailTestResult(err.message || (language === 'es' ? 'Error al iniciar autorización' : 'Failed to start authorization'));
                                   setGmailAuthLoading(false);
                                 }
                               }}
@@ -5268,7 +5450,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                             >
                               {gmailAuthLoading
                                 ? (language === 'es' ? 'Autorizando...' : 'Authorizing...')
-                                : (language === 'es' ? '🔑 Autorizar Gmail' : '🔑 Authorize Gmail')}
+                                : (language === 'es' ? 'Autorizar Gmail' : 'Authorize Gmail')}
                             </button>
                           </div>
                         </div>
@@ -5293,12 +5475,12 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                                 });
                                 const data = await res.json();
                                 if (data.success) {
-                                  setGmailTestResult(`✅ ${data.message}`);
+                                  setGmailTestResult(data.message);
                                 } else {
-                                  setGmailTestResult(`❌ ${data.error || 'Error de conexión'}`);
+                                  setGmailTestResult(data.error || 'Error de conexión');
                                 }
                               } catch (err: any) {
-                                setGmailTestResult(`❌ ${err.message || 'Error de conexión'}`);
+                                setGmailTestResult(err.message || 'Error de conexión');
                               } finally {
                                 setGmailTestLoading(false);
                               }
@@ -5307,7 +5489,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                           >
                             {gmailTestLoading
                               ? (language === 'es' ? 'Verificando...' : 'Verifying...')
-                              : (language === 'es' ? '🔍 Probar conexión' : '🔍 Test connection')}
+                              : (language === 'es' ? 'Probar conexión' : 'Test connection')}
                           </button>
                         </div>
                         {gmailTestResult && (
@@ -5319,12 +5501,11 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                         {/* Revoke info */}
                         <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                           {language === 'es'
-                            ? '🔒 Para revocar el acceso en cualquier momento, ve a myaccount.google.com/permissions y elimina esta aplicación.'
-                            : '🔒 To revoke access at any time, go to myaccount.google.com/permissions and remove this application.'}
+                            ? 'Para revocar el acceso en cualquier momento, ve a myaccount.google.com/permissions y elimina esta aplicación.'
+                            : 'To revoke access at any time, go to myaccount.google.com/permissions and remove this application.'}
                         </p>
                       </div>
                     )}
-                  </div>
                 </div>
 
                 {/* Radarr & Sonarr Media Management */}
@@ -5347,7 +5528,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                         className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
                       >
                         {expandedMediaSections.radarr ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        🎬 Radarr
+                        <span className="inline-flex items-center gap-1.5"><WorkspaceAssetIcon icon="radarr" label="Radarr" size={16} className="text-zinc-500 dark:text-zinc-300" />Radarr</span>
                       </button>
                       {expandedMediaSections.radarr && (
                         <button
@@ -5357,7 +5538,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                         >
                           {isTestingRadarr
                             ? (language === 'es' ? 'Probando...' : 'Testing...')
-                            : (language === 'es' ? '🔍 Probar conexión' : '🔍 Test connection')}
+                            : (language === 'es' ? 'Probar conexión' : 'Test connection')}
                         </button>
                       )}
                     </div>
@@ -5410,8 +5591,8 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                     )}
                     <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                       {language === 'es'
-                        ? '💡 Settings → General → Security → API Key en tu panel de Radarr.'
-                        : '💡 Settings → General → Security → API Key in your Radarr dashboard.'}
+                        ? 'Settings → General → Security → API Key en tu panel de Radarr.'
+                        : 'Settings → General → Security → API Key in your Radarr dashboard.'}
                     </p>
                     </>)}
                   </div>
@@ -5424,7 +5605,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                         className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
                       >
                         {expandedMediaSections.sonarr ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        📺 Sonarr
+                        <span className="inline-flex items-center gap-1.5"><WorkspaceAssetIcon icon="sonarr" label="Sonarr" size={16} className="text-zinc-500 dark:text-zinc-300" />Sonarr</span>
                       </button>
                       {expandedMediaSections.sonarr && (
                         <button
@@ -5434,7 +5615,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                         >
                           {isTestingSonarr
                             ? (language === 'es' ? 'Probando...' : 'Testing...')
-                            : (language === 'es' ? '🔍 Probar conexión' : '🔍 Test connection')}
+                            : (language === 'es' ? 'Probar conexión' : 'Test connection')}
                         </button>
                       )}
                     </div>
@@ -5487,47 +5668,43 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                     )}
                     <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                       {language === 'es'
-                        ? '💡 Settings → General → Security → API Key en tu panel de Sonarr.'
-                        : '💡 Settings → General → Security → API Key in your Sonarr dashboard.'}
+                        ? 'Settings → General → Security → API Key en tu panel de Sonarr.'
+                        : 'Settings → General → Security → API Key in your Sonarr dashboard.'}
                     </p>
                     </>)}
                   </div>
                 </div>
 
                 {/* Home Assistant — Smart Home */}
-                <div className="rounded-xl border border-border p-4 space-y-4">
-                  <h5 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                    🏠
-                    {language === 'es' ? 'Home Assistant — Hogar Inteligente' : 'Home Assistant — Smart Home'}
-                  </h5>
+                <div className="rounded-xl border border-border p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setExpandedMediaSections((prev) => ({ ...prev, homeAssistant: !prev.homeAssistant }))}
+                      className="flex items-center gap-1.5 text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                    >
+                      {expandedMediaSections.homeAssistant ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      <WorkspaceAssetIcon icon="home-assistant" label="Home Assistant" size={16} className="text-zinc-500 dark:text-zinc-300" />
+                      {language === 'es' ? 'Home Assistant — Hogar Inteligente' : 'Home Assistant — Smart Home'}
+                    </button>
+                    {expandedMediaSections.homeAssistant && (
+                      <button
+                        onClick={handleTestHomeAssistant}
+                        disabled={isTestingHA || !activeAgent.integrations.homeAssistant?.url || !activeAgent.integrations.homeAssistant?.token}
+                        className="rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {isTestingHA
+                          ? (language === 'es' ? 'Probando...' : 'Testing...')
+                          : (language === 'es' ? 'Probar conexión' : 'Test connection')}
+                      </button>
+                    )}
+                  </div>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                     {language === 'es'
                       ? 'Conecta con Home Assistant para controlar luces, interruptores, climatización, persianas, escenas y más. Compatible con Google Home, Alexa y todos los dispositivos integrados en HA.'
                       : 'Connect to Home Assistant to control lights, switches, climate, covers, scenes and more. Compatible with Google Home, Alexa and all devices integrated in HA.'}
                   </p>
 
-                  <div className="rounded-lg border border-border p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <button
-                        onClick={() => setExpandedMediaSections((prev) => ({ ...prev, homeAssistant: !prev.homeAssistant }))}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
-                      >
-                        {expandedMediaSections.homeAssistant ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        🏠 Home Assistant
-                      </button>
-                      {expandedMediaSections.homeAssistant && (
-                        <button
-                          onClick={handleTestHomeAssistant}
-                          disabled={isTestingHA || !activeAgent.integrations.homeAssistant?.url || !activeAgent.integrations.homeAssistant?.token}
-                          className="rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                        >
-                          {isTestingHA
-                            ? (language === 'es' ? 'Probando...' : 'Testing...')
-                            : (language === 'es' ? '🔍 Probar conexión' : '🔍 Test connection')}
-                        </button>
-                      )}
-                    </div>
-                    {expandedMediaSections.homeAssistant && (<>
+                  {expandedMediaSections.homeAssistant && (<>
                     <div className="space-y-1">
                       <label className="text-[11px] text-zinc-500 dark:text-zinc-400">
                         URL <span className="text-red-400">*</span>
@@ -5576,11 +5753,10 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                     )}
                     <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                       {language === 'es'
-                        ? '💡 Perfil de HA → Tokens de acceso de larga duración → Crear token. La URL debe ser accesible desde el servidor del agente.'
-                        : '💡 HA Profile → Long-Lived Access Tokens → Create Token. The URL must be reachable from the agent server.'}
+                        ? 'Perfil de HA → Tokens de acceso de larga duración → Crear token. La URL debe ser accesible desde el servidor del agente.'
+                        : 'HA Profile → Long-Lived Access Tokens → Create Token. The URL must be reachable from the agent server.'}
                     </p>
-                    </>)}
-                  </div>
+                  </>)}
                 </div>
 
                 {/* MCP Marketplace */}
@@ -5590,6 +5766,258 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                   copy={copy}
                   onUpdate={updateActiveAgent}
                 />
+              </div>
+            )}
+
+            {/* ───────── Skills tab ───────── */}
+            {activeTab === 'skills' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <Zap size={15} />
+                    {language === 'es' ? 'Habilidades del agente' : 'Agent Skills'}
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        if (!activeAgent) return;
+                        setIsLoadingSkills(true);
+                        try {
+                          const [builtin, installed] = await Promise.all([
+                            getBuiltinSkillsApi().catch(() => [] as SkillSummaryApi[]),
+                            getAgentSkillsApi(activeAgent.id).catch(() => [] as SkillSummaryApi[]),
+                          ]);
+                          setBuiltinSkills(builtin);
+                          setAgentSkills(installed);
+                        } finally {
+                          setIsLoadingSkills(false);
+                        }
+                      }}
+                      className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                      title={language === 'es' ? 'Recargar' : 'Refresh'}
+                    >
+                      <RefreshCw size={14} />
+                    </button>
+                    <button
+                      onClick={handleInstallAllSkills}
+                      disabled={isInstallingAllSkills}
+                      className="rounded-md bg-primary px-3 py-1.5 text-[11px] font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      {isInstallingAllSkills
+                        ? (language === 'es' ? 'Instalando...' : 'Installing...')
+                        : (language === 'es' ? 'Instalar todas' : 'Install all')}
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {language === 'es'
+                    ? 'Las skills amplían las capacidades del agente. Se auto-instalan cuando el usuario menciona un tema relevante, o instálalas manualmente con el botón +.'
+                    : 'Skills extend the agent\'s capabilities. They auto-install when the user mentions a relevant topic, or install them manually with the + button.'}
+                </p>
+
+                {/* Category filter pills */}
+                {(() => {
+                  const categoryLabels: Record<string, { es: string; en: string; icon: string }> = {
+                    all: { es: 'Todas', en: 'All', icon: '📋' },
+                    integration: { es: 'Integraciones', en: 'Integrations', icon: '🔌' },
+                    productivity: { es: 'Productividad', en: 'Productivity', icon: '⚡' },
+                    finance: { es: 'Finanzas', en: 'Finance', icon: '💰' },
+                    lifestyle: { es: 'Estilo de vida', en: 'Lifestyle', icon: '🏠' },
+                    knowledge: { es: 'Conocimiento', en: 'Knowledge', icon: '📚' },
+                    developer: { es: 'Desarrollo', en: 'Developer', icon: '💻' },
+                  };
+                  // Merge installed + available for counts
+                  const installedIds = new Set(agentSkills.map(s => s.id));
+                  const allUnique = [...agentSkills, ...builtinSkills.filter(b => !installedIds.has(b.id))];
+                  const categoryCounts: Record<string, number> = {};
+                  for (const s of allUnique) {
+                    const cat = s.category || 'general';
+                    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+                  }
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(categoryLabels).map(([key, label]) => {
+                        const count = key === 'all' ? allUnique.length : (categoryCounts[key] || 0);
+                        if (key !== 'all' && count === 0) return null;
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => setSkillsCategoryFilter(key)}
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors flex items-center gap-1 ${
+                              skillsCategoryFilter === key
+                                ? 'bg-primary text-white'
+                                : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                            }`}
+                          >
+                            <span>{label.icon}</span>
+                            <span>{language === 'es' ? label.es : label.en}</span>
+                            <span className="opacity-60">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {/* Text filter */}
+                <input
+                  value={skillsFilter}
+                  onChange={(e) => setSkillsFilter(e.target.value)}
+                  placeholder={language === 'es' ? 'Filtrar skills...' : 'Filter skills...'}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+
+                {isLoadingSkills ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw size={20} className="animate-spin text-primary mr-2" />
+                    <span className="text-sm text-zinc-500">{language === 'es' ? 'Cargando skills...' : 'Loading skills...'}</span>
+                  </div>
+                ) : (
+                  (() => {
+                    const textFilter = skillsFilter.toLowerCase();
+                    const matchesText = (s: SkillSummaryApi) =>
+                      !textFilter || s.name.toLowerCase().includes(textFilter) || s.description.toLowerCase().includes(textFilter) || s.tags.some(t => t.toLowerCase().includes(textFilter));
+                    const matchesCat = (s: SkillSummaryApi) =>
+                      skillsCategoryFilter === 'all' || (s.category || 'general') === skillsCategoryFilter;
+
+                    const installedIds = new Set(agentSkills.map(s => s.id));
+                    const filteredInstalled = agentSkills.filter(s => matchesText(s) && matchesCat(s));
+                    const filteredAvailable = builtinSkills.filter(b => !installedIds.has(b.id) && matchesText(b) && matchesCat(b));
+
+                    const groupByCategory = (skills: SkillSummaryApi[]) => {
+                      const groups: Record<string, SkillSummaryApi[]> = {};
+                      for (const s of skills) {
+                        const cat = s.category || 'general';
+                        if (!groups[cat]) groups[cat] = [];
+                        groups[cat].push(s);
+                      }
+                      const order = ['integration', 'productivity', 'finance', 'lifestyle', 'knowledge', 'developer', 'general'];
+                      return order.filter(c => groups[c]).map(c => ({ category: c, skills: groups[c] }));
+                    };
+
+                    const catLabel = (cat: string): string => {
+                      const map: Record<string, { es: string; en: string }> = {
+                        integration: { es: '🔌 Integraciones', en: '🔌 Integrations' },
+                        productivity: { es: '⚡ Productividad', en: '⚡ Productivity' },
+                        finance: { es: '💰 Finanzas', en: '💰 Finance' },
+                        lifestyle: { es: '🏠 Estilo de vida', en: '🏠 Lifestyle' },
+                        knowledge: { es: '📚 Conocimiento', en: '📚 Knowledge' },
+                        developer: { es: '💻 Desarrollo', en: '💻 Developer' },
+                        general: { es: '📋 General', en: '📋 General' },
+                      };
+                      return map[cat] ? (language === 'es' ? map[cat].es : map[cat].en) : cat;
+                    };
+
+                    const renderSkillCard = (skill: SkillSummaryApi, isInstalled: boolean) => (
+                      <div
+                        key={skill.id}
+                        className={`rounded-lg border p-3 flex items-center justify-between transition-colors ${
+                          isInstalled
+                            ? skill.enabled
+                              ? 'border-primary/30 bg-primary/5'
+                              : 'border-border bg-background/40 opacity-60'
+                            : 'border-dashed border-border bg-background/30'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0 mr-3">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-medium truncate ${isInstalled ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300'}`}>{skill.name}</span>
+                            <span className="text-[10px] text-zinc-400">v{skill.version}</span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{skill.description}</p>
+                          {skill.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {skill.tags.slice(0, 4).map((tag) => (
+                                <span key={tag} className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-[9px] text-zinc-500 dark:text-zinc-400">{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {isInstalled ? (
+                            <>
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={skill.enabled}
+                                  onChange={(e) => handleToggleSkill(skill.id, e.target.checked)}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-8 h-4.5 bg-zinc-300 dark:bg-zinc-700 peer-checked:bg-primary rounded-full peer-focus:ring-2 peer-focus:ring-primary/40 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5"></div>
+                              </label>
+                              <button
+                                onClick={() => handleDeleteSkill(skill.id)}
+                                className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
+                                title={language === 'es' ? 'Eliminar' : 'Remove'}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleInstallSingleSkill(skill.id)}
+                              className="p-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                              title={language === 'es' ? 'Instalar' : 'Install'}
+                            >
+                              <Plus size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+
+                    const installedGroups = groupByCategory(filteredInstalled);
+                    const availableGroups = groupByCategory(filteredAvailable);
+                    const showCategoryHeaders = skillsCategoryFilter === 'all';
+
+                    return (
+                      <div className="space-y-4">
+                        {/* Installed skills */}
+                        {filteredInstalled.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                              {language === 'es' ? `Instaladas (${filteredInstalled.length})` : `Installed (${filteredInstalled.length})`}
+                            </h5>
+                            {installedGroups.map(({ category: cat, skills: catSkills }) => (
+                              <div key={cat} className="space-y-1.5">
+                                {showCategoryHeaders && (
+                                  <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 pl-1 pt-1">{catLabel(cat)}</p>
+                                )}
+                                {catSkills.map(s => renderSkillCard(s, true))}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Available skills */}
+                        {filteredAvailable.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                              {language === 'es' ? `Disponibles (${filteredAvailable.length})` : `Available (${filteredAvailable.length})`}
+                            </h5>
+                            {availableGroups.map(({ category: cat, skills: catSkills }) => (
+                              <div key={cat} className="space-y-1.5">
+                                {showCategoryHeaders && (
+                                  <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 pl-1 pt-1">{catLabel(cat)}</p>
+                                )}
+                                {catSkills.map(s => renderSkillCard(s, false))}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {filteredInstalled.length === 0 && filteredAvailable.length === 0 && (
+                          <div className="text-center py-8 text-sm text-zinc-500">
+                            {agentSkills.length === 0 && builtinSkills.length === 0
+                              ? (language === 'es' ? 'No hay skills disponibles. Reinicia el servidor para cargar el catálogo.' : 'No skills available. Restart the server to load the catalog.')
+                              : (language === 'es' ? 'No hay skills que coincidan con el filtro.' : 'No skills match the filter.')}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                )}
               </div>
             )}
 
@@ -6159,8 +6587,8 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
               {isAgentDeployed && agentStatus && (
                 <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
                   {agentStatus.isProcessing
-                    ? (language === 'es' ? '⚡ Procesando...' : '⚡ Processing...')
-                    : `📨 ${agentStatus.historyLength} msgs`}
+                    ? (language === 'es' ? 'Procesando...' : 'Processing...')
+                    : `${agentStatus.historyLength} msgs`}
                 </span>
               )}
             </div>

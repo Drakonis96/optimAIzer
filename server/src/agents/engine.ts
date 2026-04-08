@@ -10,6 +10,7 @@ import * as storage from './storage';
 import { estimateInputTokens, estimateTextTokens } from '../auth/costs';
 import { MemoryCandidate, scoreAndFilterMemories } from './smartMemory';
 import { buildSkillsPromptSection } from './skills';
+import { autoInstallSkillsByMessage } from './skills/registry';
 
 // ---------------------------------------------------------------------------
 // Strip tool-call artifacts from text content
@@ -505,7 +506,8 @@ CAPACIDADES DISPONIBLES (RESUMEN):
 - Transcripción automática de notas de voz y audios (Whisper). Los audios se transcriben automáticamente al recibirlos. También puedes usar transcribe_telegram_audio si necesitas re-procesar un audio.
 - Análisis inteligente de imágenes con IA (visión). Usa analyze_telegram_image para describir fotos, extraer texto (OCR), analizar gráficos, etc.
 - Acciones encadenadas: puedes combinar múltiples herramientas en secuencia (ej: transcribir audio → crear nota → programar recordatorio).
-- Integración con herramientas externas por MCP cuando estén conectadas.${config.permissions.terminalAccess ? `
+- Integración con herramientas externas por MCP cuando estén conectadas.
+- Sistema de Skills: tienes habilidades especializadas (skills) que amplían tu conocimiento y comportamiento en dominios concretos. Las skills activas se inyectan automáticamente en tu contexto. Sigue sus instrucciones cuando el tema de la conversación coincida con una skill activa.${config.permissions.terminalAccess ? `
 - 🖥️ ACCESO AL TERMINAL DEL SISTEMA: Puedes ejecutar comandos en el terminal/shell del dispositivo (${process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux'}) usando run_terminal_command. IMPORTANTE: cada comando REQUIERE aprobación del usuario por Telegram antes de ejecutarse. Explica siempre claramente qué vas a hacer y por qué. Ejemplos: crear carpetas, mover archivos, cambiar configuraciones del sistema, instalar paquetes, gestionar servicios, etc.` : ''}${config.permissions.codeExecution ? `
 - 💻 EJECUCIÓN DE CÓDIGO: Puedes crear y ejecutar código (Python, Node.js, Bash, etc.) en el dispositivo usando execute_code. IMPORTANTE: cada ejecución REQUIERE aprobación del usuario por Telegram. Explica siempre el objetivo del código y qué resultado esperas. Útil para análisis de datos, scripts de automatización, procesamiento de archivos, web scraping avanzado, cálculos complejos, etc.` : ''}
 - Si el usuario pregunta "qué puedes hacer", explica estas capacidades con ejemplos breves y accionables.${config.permissions.terminalAccess || config.permissions.codeExecution ? `
@@ -564,7 +566,8 @@ AVAILABLE CAPABILITIES (SUMMARY):
 - Automatic voice note and audio transcription (Whisper). Audio messages are auto-transcribed upon receipt. You can also use transcribe_telegram_audio to re-process audio.
 - Intelligent image analysis with AI vision. Use analyze_telegram_image to describe photos, extract text (OCR), analyze charts, etc.
 - Chained actions: you can combine multiple tools in sequence (e.g. transcribe audio → create note → set reminder).
-- External integrations through MCP when connected.${config.permissions.terminalAccess ? `
+- External integrations through MCP when connected.
+- Skills system: you have specialized skills that extend your knowledge and behavior in specific domains. Active skills are automatically injected into your context. Follow their instructions when the conversation topic matches an active skill.${config.permissions.terminalAccess ? `
 - 🖥️ SYSTEM TERMINAL ACCESS: You can execute commands on the device's terminal/shell (${process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux'}) using run_terminal_command. IMPORTANT: each command REQUIRES user approval via Telegram before execution. Always clearly explain what you will do and why. Examples: create folders, move files, change system settings, install packages, manage services, etc.` : ''}${config.permissions.codeExecution ? `
 - 💻 CODE EXECUTION: You can create and execute code (Python, Node.js, Bash, etc.) on the device using execute_code. IMPORTANT: each execution REQUIRES user approval via Telegram. Always explain the code's purpose and expected outcome. Useful for data analysis, automation scripts, file processing, advanced web scraping, complex calculations, etc.` : ''}
 - If the user asks "what can you do", explain these capabilities with short actionable examples.${config.permissions.terminalAccess || config.permissions.codeExecution ? `
@@ -752,6 +755,12 @@ export async function processAgentMessage(
 
   // ── Step 4: Fetch Working Memory ──
   const workingMemoryEntries = storage.getAllWorkingMemory(context.userId, context.agentId);
+
+  // ── Step 4b: On-demand skill auto-install ──
+  // If the user message matches keyword triggers of builtin skills not yet
+  // installed for this agent, install them now so they are included in the
+  // system prompt for this very turn.
+  autoInstallSkillsByMessage(context.userId, context.agentId, userMessage);
 
   const systemPrompt = buildAgentSystemPrompt(
     config, context.userId, context.agentId,

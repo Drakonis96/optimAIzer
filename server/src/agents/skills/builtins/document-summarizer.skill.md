@@ -1,0 +1,120 @@
+---
+id: document-summarizer
+name: "Resumen de Documentos"
+description: "Resumen inteligente de documentos, artículos, PDFs y textos largos con extracción de puntos clave"
+version: "1.0.0"
+author: "optimAIzer"
+enabled: true
+priority: 55
+tags: ["documentos", "resumen", "pdf", "artículos", "lectura", "síntesis"]
+category: "knowledge"
+triggers:
+  events:
+    - "keyword:resume"
+    - "keyword:resumen"
+    - "keyword:resumir"
+    - "keyword:sintetiza"
+    - "keyword:puntos clave"
+    - "keyword:documento"
+    - "keyword:artículo"
+    - "keyword:articulo"
+    - "keyword:pdf"
+  conditions: "Cuando el usuario envíe documentos o pida resúmenes"
+requires_tools:
+  - fetch_webpage
+  - browse_website
+  - create_note
+  - web_search
+  - analyze_telegram_image
+---
+
+# Resumen de Documentos — Protocolo
+
+## Tipos de entrada soportados
+
+### Documentos de Telegram
+- **PDFs**: Texto extraído automáticamente antes de procesar.
+- **Imágenes de documentos**: OCR con visión IA.
+- **Archivos de texto**: Leídos directamente.
+
+### URLs de artículos
+- `fetch_webpage` para artículos estáticos.
+- `browse_website` para sitios dinámicos (JS-heavy).
+
+### Texto pegado en el chat
+- Procesar directamente el texto proporcionado.
+
+## Niveles de resumen
+
+### 🟢 Express (TL;DR)
+- 2-3 líneas con la idea principal.
+- Para: noticias cortas, emails, posts.
+```
+📝 TL;DR: [Resumen en máximo 3 líneas]
+```
+
+### 🟡 Estándar
+- 1-2 párrafos con puntos clave.
+- Para: artículos, informes cortos.
+```
+📋 **Resumen: [Título]**
+
+**Idea principal:** [1-2 líneas]
+
+**Puntos clave:**
+• [Punto 1]
+• [Punto 2]
+• [Punto 3]
+
+**Conclusión:** [1-2 líneas]
+```
+
+### 🔴 Detallado
+- Resumen por secciones con análisis.
+- Para: papers, reportes largos, documentos legales.
+```
+📄 **Análisis: [Título]**
+
+### Contexto
+[Quién, qué, cuándo, por qué]
+
+### Secciones principales
+**1. [Sección]** — [Resumen de esta sección]
+**2. [Sección]** — [Resumen]
+...
+
+### Datos clave
+- [Dato/cifra 1]
+- [Dato/cifra 2]
+
+### Implicaciones
+[Qué significa esto, a quién afecta]
+
+### Acción recomendada
+[Si aplica, qué debería hacer el usuario]
+```
+
+## Flujo de trabajo
+
+### Documento recibido
+1. Detectar tipo y longitud.
+2. Elegir nivel de resumen apropiado (o preguntar).
+3. Procesar y generar resumen.
+4. Preguntar si quiere guardarlo como nota.
+
+### URL proporcionada
+1. Intentar `fetch_webpage` primero.
+2. Si el contenido es insuficiente, usar `browse_website`.
+3. Generar resumen con fuente citada.
+
+### Texto largo en chat
+1. Identificar estructura del texto.
+2. Generar resumen del nivel apropiado.
+
+## Reglas
+- Mantener fidelidad al contenido original — no inventar información.
+- Si el documento tiene datos numéricos importantes, incluirlos en el resumen.
+- Para documentos legales/técnicos, señalar términos clave y sus implicaciones.
+- Si el documento está en otro idioma, resumir en el idioma del usuario.
+- Ofrecer guardar como nota los resúmenes largos.
+- Indicar si alguna parte del documento no se pudo procesar (imágenes, tablas complejas).

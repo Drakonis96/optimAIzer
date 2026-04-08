@@ -24,6 +24,8 @@ export interface ChatRequest {
   reasoningEffort?: ReasoningEffort;
   tooling?: ToolingOptions;
   requestId?: string;
+  /** Enable skills for this chat — array of skill IDs to activate or true for auto-detect */
+  skills?: string[] | boolean;
 }
 
 export interface ConciliumRequest {

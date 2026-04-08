@@ -10,6 +10,9 @@ import { isModelAllowedForUser } from '../auth/users';
 import { estimateInputTokens, estimateTextTokens } from '../auth/costs';
 import { assertWithinUserMonthlyBudget, recordUserUsageEvent } from '../auth/usage';
 import { AuthUser } from '../auth/types';
+import { getBuiltinSkills } from '../agents/skills/registry';
+import { buildChatSkillsPrompt, buildSkillsPromptFromList } from '../agents/skills/registry';
+import { Skill } from '../agents/skills';
 
 export const chatRouter = Router();
 
@@ -296,12 +299,41 @@ chatRouter.post('/cancel', (req: Request, res: Response) => {
 chatRouter.post('/', async (req: Request, res: Response) => {
   const authUser = req.authUser!;
   const body = req.body as ChatRequest;
-  const { provider, model, messages, systemPrompt, maxTokens, temperature, reasoningEffort, tooling, requestId } = body;
+  const { provider, model, messages, systemPrompt, maxTokens, temperature, reasoningEffort, tooling, requestId, skills: skillsOption } = body;
 
   // Validate
   if (!provider || !model || !messages || !Array.isArray(messages)) {
     res.status(400).json({ error: 'Missing required fields: provider, model, messages' });
     return;
+  }
+
+  // Build effective system prompt with skills if enabled
+  let effectiveSystemPrompt = systemPrompt;
+  if (skillsOption) {
+    try {
+      const builtinSkills = getBuiltinSkills();
+      let skillsPrompt = '';
+
+      if (skillsOption === true) {
+        // Auto-detect: find skills triggered by latest user message
+        const latestUser = messages.filter((m) => m.role === 'user').pop()?.content || '';
+        skillsPrompt = buildChatSkillsPrompt(builtinSkills, latestUser);
+      } else if (Array.isArray(skillsOption)) {
+        // Specific skill IDs enabled
+        const selected = builtinSkills.filter((s) => skillsOption.includes(s.id));
+        if (selected.length > 0) {
+          skillsPrompt = buildSkillsPromptFromList(selected, 'es', { compact: true, maxSkills: 5 });
+        }
+      }
+
+      if (skillsPrompt) {
+        effectiveSystemPrompt = effectiveSystemPrompt
+          ? `${effectiveSystemPrompt}\n\n${skillsPrompt}`
+          : skillsPrompt;
+      }
+    } catch (err) {
+      console.warn('[Chat] Failed to build skills prompt:', err);
+    }
   }
 
   if (!hasApiKey(provider)) {
@@ -314,7 +346,7 @@ chatRouter.post('/', async (req: Request, res: Response) => {
   }
 
   const effectiveTooling = getEnabledToolingForProvider(provider, tooling);
-  const inputTokens = estimateInputTokens(messages, systemPrompt);
+  const inputTokens = estimateInputTokens(messages, effectiveSystemPrompt);
   if (
     !ensureBudget(res, {
       user: authUser,
@@ -341,7 +373,7 @@ chatRouter.post('/', async (req: Request, res: Response) => {
       provider,
       model,
       messages,
-      systemPrompt,
+      systemPrompt: effectiveSystemPrompt,
       maxTokens,
       temperature,
       reasoningEffort,

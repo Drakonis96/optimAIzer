@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Sliders, Zap, History, Database, FileText, PanelRightClose, Infinity, Scale, Users, ChevronDown, Globe2, Code2, Wrench, Columns2, Plus, Minus, Save } from 'lucide-react';
+import { Sliders, Zap, History, Database, FileText, PanelRightClose, Infinity, Scale, Users, ChevronDown, Globe2, Code2, Wrench, Columns2, Plus, Minus, Save, Sparkles } from 'lucide-react';
 import { AppSettings, ModelSelector, ReasoningEffort, ConciliumMode, ConciliumPreset } from '../types';
 import { ConfirmationModal } from './ConfirmationModal';
 import { getModelsForProvider, PROVIDERS, REASONING_EFFORT_LEVELS, supportsReasoningEffort, TRANSLATIONS, getProviderToolSupport, providerSupportsTemperature } from '../constants';
@@ -314,6 +314,33 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
                     />
                 </label>
             </div>
+        </div>
+
+        <div className="h-px bg-zinc-200 dark:bg-zinc-800" />
+
+        {/* Skills Section */}
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Sparkles size={16} className={settings.enableSkills ? 'text-violet-500' : 'text-zinc-400'} />
+                    <label className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{t.sidebarRight.skills}</label>
+                </div>
+                <button
+                    onClick={() => onUpdateSetting('enableSkills', !settings.enableSkills)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                        settings.enableSkills ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                    }`}
+                >
+                    <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            settings.enableSkills ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                    />
+                </button>
+            </div>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+                {t.sidebarRight.skillsDesc}
+            </p>
         </div>
 
         <div className="h-px bg-zinc-200 dark:bg-zinc-800" />

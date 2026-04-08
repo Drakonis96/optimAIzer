@@ -609,6 +609,7 @@ const createDefaultSettings = (): AppSettings => ({
   enableInfiniteMemory: true,
   ragEmbeddingProvider: '',
   ragEmbeddingModel: '',
+  enableSkills: true,
 
   // Concilium Defaults
   enableConcilium: false,
@@ -669,6 +670,7 @@ const sanitizeSettings = (value: unknown): AppSettings => {
     ]
     : defaults.arenaTemperatures;
   candidate.enableModelTools = candidate.enableModelTools === true;
+  candidate.enableSkills = candidate.enableSkills !== false; // default true
   candidate.tooling = {
     webSearch: candidate.tooling?.webSearch === true,
     codeExecution: candidate.tooling?.codeExecution === true,
@@ -2991,6 +2993,7 @@ Rules:
               : undefined,
             tooling: resolveTooling(appSettings.provider),
             requestId: streamRequestId,
+            skills: appSettings.enableSkills || undefined,
           },
           {
             onToken: (token) => {

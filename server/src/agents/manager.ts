@@ -15,6 +15,7 @@ import { transcribeAudio } from './transcription';
 import { buildWebhookInstruction, IncomingWebhookPayload } from './webhooks';
 import * as eventSubs from './eventSubscriptions';
 import { findSkillsByMessage, findSkillsByEvent } from './skills';
+import { installMatchingIntegrationSkills } from './skills/registry';
 import {
   HomeAssistantWebSocket,
   HAStateChangedEvent,
@@ -1311,6 +1312,33 @@ export function deployAgent(config: AgentConfig, userId: string = 'default'): { 
 
   console.log(`[Agent:${config.name}] Deployed successfully (provider: ${config.provider}, model: ${config.model})`);
 
+  // Auto-install built-in skills matching agent integrations (non-blocking)
+  try {
+    const integrationConfig = {
+      hasGoogleCalendar: !!config.calendar?.google,
+      hasICloudCalendar: !!config.calendar?.icloud,
+      hasGmail: !!(config.gmail?.clientId && config.gmail?.refreshToken && config.permissions.gmailAccess),
+      hasHomeAssistant: !!(config.homeAssistant?.url && config.homeAssistant?.token),
+      hasRadarr: !!(config.media?.radarr?.url && config.media?.radarr?.apiKey),
+      hasSonarr: !!(config.media?.sonarr?.url && config.media?.sonarr?.apiKey),
+      hasTelegram: !!(config.telegram?.botToken),
+      hasVision: true,
+      hasTranscription: true,
+      hasTerminalAccess: !!config.permissions.terminalAccess,
+      hasCodeExecution: !!config.permissions.codeExecution,
+    };
+    const integrationSkills = installMatchingIntegrationSkills(userId, config.id, integrationConfig);
+
+    // General-purpose skills are now auto-installed on-demand when the user
+    // message matches a skill's keyword triggers (see engine.ts / registry.ts).
+    // This keeps the agent lean and only loads skills it actually needs.
+
+    if (integrationSkills.length > 0) {
+      console.log(`[Agent:${config.name}] Integration skills installed: ${integrationSkills.length}`);
+    }
+  } catch (err: any) {
+    console.warn(`[Agent:${config.name}] Failed to install built-in skills:`, err?.message || err);
+  }
   return { success: true };
 }
 

@@ -31,6 +31,23 @@ import { MediaConfig } from '../agents/types';
 import { HomeAssistantConfig } from '../agents/homeAssistant';
 import { safeErrorMessage } from '../security/redact';
 import { readRecentAuditLogs } from '../security/terminalSecurity';
+import {
+  getBuiltinSkills,
+  getBuiltinSkillSummaries,
+  getBuiltinSkillsByCategory,
+  installBuiltinSkill,
+  installAllBuiltinSkills,
+  installMatchingIntegrationSkills,
+} from '../agents/skills/registry';
+import {
+  getAllSkills as getAgentSkills,
+  getSkill as getAgentSkill,
+  saveSkill as saveAgentSkill,
+  deleteSkill as deleteAgentSkill,
+  toggleSkill as toggleAgentSkill,
+  parseSkillMarkdown,
+  getSkillSummaries as getAgentSkillSummaries,
+} from '../agents/skills';
 
 export const agentsRouter = Router();
 
@@ -1677,6 +1694,183 @@ agentsRouter.get('/security/audit-logs', (_req: Request, res: Response) => {
     const limit = Math.min(Number(_req.query.limit) || 50, 200);
     const logs = readRecentAuditLogs(limit);
     res.json({ success: true, logs });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Skills API — Built-in catalog + per-agent skill management
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/agents/skills/builtins
+ * List all available built-in skills from the catalog.
+ */
+agentsRouter.get('/skills/builtins', (_req: Request, res: Response) => {
+  try {
+    const category = (_req.query.category as string) || undefined;
+    const validCategories = ['integration', 'productivity', 'finance', 'lifestyle', 'knowledge', 'developer', 'general'];
+    if (category && validCategories.includes(category)) {
+      const skills = getBuiltinSkillsByCategory(category as any);
+      res.json({ success: true, skills: skills.map(s => ({ id: s.id, name: s.name, description: s.description, version: s.version, tags: s.tags, priority: s.priority, category: s.category || category })) });
+    } else {
+      const summaries = getBuiltinSkillSummaries();
+      res.json({ success: true, skills: summaries });
+    }
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+/**
+ * GET /api/agents/:id/skills
+ * List all skills installed for an agent.
+ */
+agentsRouter.get('/:id/skills', (req: Request, res: Response) => {
+  try {
+    const userId = req.authUser!.id;
+    const agentId = String(req.params.id);
+    const summaries = getAgentSkillSummaries(userId, agentId);
+    res.json({ success: true, skills: summaries });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+/**
+ * GET /api/agents/:id/skills/:skillId
+ * Get full details of a specific skill.
+ */
+agentsRouter.get('/:id/skills/:skillId', (req: Request, res: Response) => {
+  try {
+    const userId = req.authUser!.id;
+    const agentId = String(req.params.id);
+    const skillId = String(req.params.skillId);
+    const skill = getAgentSkill(userId, agentId, skillId);
+    if (!skill) {
+      res.status(404).json({ success: false, error: 'Skill not found' });
+      return;
+    }
+    res.json({ success: true, skill });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+/**
+ * POST /api/agents/:id/skills
+ * Create or update a custom skill for an agent.
+ * Body: { id, name, description, instructions, ... } or raw Markdown with frontmatter.
+ */
+agentsRouter.post('/:id/skills', (req: Request, res: Response) => {
+  try {
+    const userId = req.authUser!.id;
+    const agentId = String(req.params.id);
+    const body = req.body;
+
+    let skill;
+    if (typeof body.markdown === 'string') {
+      // Raw Markdown with YAML frontmatter
+      skill = parseSkillMarkdown(body.markdown, body.filename);
+    } else {
+      // Structured JSON
+      skill = parseSkillMarkdown('', undefined);
+      Object.assign(skill, {
+        id: body.id || body.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || `skill-${Date.now()}`,
+        name: body.name || 'Unnamed Skill',
+        description: body.description || '',
+        instructions: body.instructions || '',
+        tags: body.tags || [],
+        priority: body.priority || 50,
+        enabled: body.enabled !== false,
+        version: body.version || '1.0.0',
+        author: body.author || req.authUser!.username || 'user',
+        triggers: body.triggers || { events: [], conditions: undefined },
+        mcpServers: body.mcpServers || [],
+      });
+    }
+
+    saveAgentSkill(userId, agentId, skill);
+    res.json({ success: true, skill: { id: skill.id, name: skill.name } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+/**
+ * PUT /api/agents/:id/skills/:skillId/toggle
+ * Enable or disable a skill.
+ * Body: { enabled: boolean }
+ */
+agentsRouter.put('/:id/skills/:skillId/toggle', (req: Request, res: Response) => {
+  try {
+    const userId = req.authUser!.id;
+    const agentId = String(req.params.id);
+    const skillId = String(req.params.skillId);
+    const { enabled } = req.body;
+    const skill = toggleAgentSkill(userId, agentId, skillId, enabled === true);
+    if (!skill) {
+      res.status(404).json({ success: false, error: 'Skill not found' });
+      return;
+    }
+    res.json({ success: true, skill: { id: skill.id, enabled: skill.enabled } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+/**
+ * DELETE /api/agents/:id/skills/:skillId
+ * Delete a skill from an agent.
+ */
+agentsRouter.delete('/:id/skills/:skillId', (req: Request, res: Response) => {
+  try {
+    const userId = req.authUser!.id;
+    const agentId = String(req.params.id);
+    const skillId = String(req.params.skillId);
+    const deleted = deleteAgentSkill(userId, agentId, skillId);
+    res.json({ success: deleted });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+/**
+ * POST /api/agents/:id/skills/install-builtin
+ * Install a built-in skill to an agent.
+ * Body: { skillId: string, force?: boolean }
+ */
+agentsRouter.post('/:id/skills/install-builtin', (req: Request, res: Response) => {
+  try {
+    const userId = req.authUser!.id;
+    const agentId = String(req.params.id);
+    const { skillId, force } = req.body;
+    if (!skillId) {
+      res.status(400).json({ success: false, error: 'Missing skillId' });
+      return;
+    }
+    const skill = installBuiltinSkill(userId, agentId, skillId, force === true);
+    if (!skill) {
+      res.status(404).json({ success: false, error: 'Built-in skill not found' });
+      return;
+    }
+    res.json({ success: true, skill: { id: skill.id, name: skill.name } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+/**
+ * POST /api/agents/:id/skills/install-all-builtins
+ * Install all available built-in skills to an agent.
+ */
+agentsRouter.post('/:id/skills/install-all-builtins', (req: Request, res: Response) => {
+  try {
+    const userId = req.authUser!.id;
+    const agentId = String(req.params.id);
+    const installed = installAllBuiltinSkills(userId, agentId);
+    res.json({ success: true, installed: installed.length, skills: installed.map(s => ({ id: s.id, name: s.name })) });
   } catch (error: any) {
     res.status(500).json({ success: false, error: safeErrorMessage(error) });
   }

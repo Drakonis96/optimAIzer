@@ -383,7 +383,9 @@ export const TRANSLATIONS = {
             infiniteMemory: "Infinite Memory (RAG)",
             infiniteMemoryDesc: "Searches across previous conversations with TF-IDF similarity to inject relevant context without spending model tokens.",
             ragNoEmbeddingModel: "RAG is using the built-in TF-IDF engine (no embedding model required). To use API embeddings, configure it in Settings > General & AI.",
-            ragIndexed: "Indexed: {count} chunks"
+            ragIndexed: "Indexed: {count} chunks",
+            skills: "Skills",
+            skillsDesc: "Activates specialized knowledge modules that automatically enhance responses based on your message topic."
         },
         topBar: {
             provider: "Provider",
@@ -690,7 +692,9 @@ export const TRANSLATIONS = {
             infiniteMemory: "Memoria Infinita (RAG)",
             infiniteMemoryDesc: "Busca en todas las conversaciones anteriores usando similitud TF-IDF para obtener contexto sin consumir tokens.",
             ragNoEmbeddingModel: "El RAG usa el motor TF-IDF integrado (no requiere modelo de embeddings). Para embeddings por API, configúralo en Ajustes > General e IA.",
-            ragIndexed: "Indexados: {count} fragmentos"
+            ragIndexed: "Indexados: {count} fragmentos",
+            skills: "Skills",
+            skillsDesc: "Activa módulos de conocimiento especializado que mejoran las respuestas automáticamente según el tema de tu mensaje."
         },
         topBar: {
             provider: "Proveedor",

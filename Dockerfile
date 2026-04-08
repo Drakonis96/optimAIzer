@@ -33,6 +33,7 @@ RUN npm ci --omit=dev \
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server/dist ./server/dist
+COPY --from=build /app/server/src/agents/skills/builtins ./server/src/agents/skills/builtins
 
 RUN mkdir -p /app/data
 

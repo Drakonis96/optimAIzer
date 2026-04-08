@@ -484,7 +484,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         const parsed = await parseFile(file);
         setPendingAttachments((prev) => [...prev, parsed]);
         if (parsed.error) {
-          setInputNotice(`⚠️ ${file.name}: ${parsed.error}`);
+          setInputNotice(`${file.name}: ${parsed.error}`);
           continue;
         }
         setInputNotice(t.chatArea.fileAttached.replace('{name}', file.name));

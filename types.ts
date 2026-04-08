@@ -194,6 +194,9 @@ export interface AppSettings {
   ragEmbeddingProvider: string; // provider for embeddings ('' = use built-in TF-IDF)
   ragEmbeddingModel: string;   // model for embeddings ('' = use built-in TF-IDF)
 
+  // Skills
+  enableSkills: boolean;
+
   // Output Config
   maxOutputTokens: number;
   unlimitedOutputTokens: boolean;
