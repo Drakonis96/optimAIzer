@@ -37,6 +37,7 @@ import {
   getBuiltinSkillsByCategory,
   installBuiltinSkill,
   installAllBuiltinSkills,
+  uninstallAllBuiltinSkills,
   installMatchingIntegrationSkills,
 } from '../agents/skills/registry';
 import {
@@ -1871,6 +1872,21 @@ agentsRouter.post('/:id/skills/install-all-builtins', (req: Request, res: Respon
     const agentId = String(req.params.id);
     const installed = installAllBuiltinSkills(userId, agentId);
     res.json({ success: true, installed: installed.length, skills: installed.map(s => ({ id: s.id, name: s.name })) });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
+  }
+});
+
+/**
+ * POST /api/agents/:id/skills/uninstall-all-builtins
+ * Uninstall all built-in skills from an agent.
+ */
+agentsRouter.post('/:id/skills/uninstall-all-builtins', (req: Request, res: Response) => {
+  try {
+    const userId = req.authUser!.id;
+    const agentId = String(req.params.id);
+    const removed = uninstallAllBuiltinSkills(userId, agentId);
+    res.json({ success: true, removed: removed.length, skillIds: removed });
   } catch (error: any) {
     res.status(500).json({ success: false, error: safeErrorMessage(error) });
   }

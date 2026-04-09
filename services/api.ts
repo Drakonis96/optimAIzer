@@ -1407,6 +1407,15 @@ export async function installAllBuiltinSkillsApi(agentId: string): Promise<numbe
   return data.installed || 0;
 }
 
+export async function uninstallAllBuiltinSkillsApi(agentId: string): Promise<number> {
+  const res = await apiFetch(`/agents/${encodeURIComponent(agentId)}/skills/uninstall-all-builtins`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const data = await safeJson(res);
+  return data.removed || 0;
+}
+
 export async function deleteAgentSkillApi(agentId: string, skillId: string): Promise<boolean> {
   const res = await apiFetch(`/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}`, {
     method: 'DELETE',

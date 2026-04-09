@@ -80,6 +80,7 @@ import {
     installBuiltinSkillApi,
   toggleAgentSkillApi,
   installAllBuiltinSkillsApi,
+  uninstallAllBuiltinSkillsApi,
   deleteAgentSkillApi,
 } from '../services/api';
 import type {
@@ -2436,6 +2437,7 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
   const [agentSkills, setAgentSkills] = useState<SkillSummaryApi[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isInstallingAllSkills, setIsInstallingAllSkills] = useState(false);
+  const [isUninstallingAllSkills, setIsUninstallingAllSkills] = useState(false);
   const [skillsFilter, setSkillsFilter] = useState('');
   const [skillsCategoryFilter, setSkillsCategoryFilter] = useState<string>('all');
   const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null);
@@ -2633,6 +2635,18 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
       setAgentSkills(installed);
     } finally {
       setIsInstallingAllSkills(false);
+    }
+  };
+
+  const handleUninstallAllSkills = async () => {
+    if (!activeAgent) return;
+    setIsUninstallingAllSkills(true);
+    try {
+      await uninstallAllBuiltinSkillsApi(activeAgent.id);
+      const installed = await getAgentSkillsApi(activeAgent.id).catch(() => [] as SkillSummaryApi[]);
+      setAgentSkills(installed);
+    } finally {
+      setIsUninstallingAllSkills(false);
     }
   };
 
@@ -5807,6 +5821,17 @@ export const AgentsWorkspace: React.FC<AgentsWorkspaceProps> = ({
                         ? (language === 'es' ? 'Instalando...' : 'Installing...')
                         : (language === 'es' ? 'Instalar todas' : 'Install all')}
                     </button>
+                    {builtinSkills.length > 0 && builtinSkills.every(b => agentSkills.some(a => a.id === b.id)) && (
+                      <button
+                        onClick={handleUninstallAllSkills}
+                        disabled={isUninstallingAllSkills}
+                        className="rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                      >
+                        {isUninstallingAllSkills
+                          ? (language === 'es' ? 'Desinstalando...' : 'Uninstalling...')
+                          : (language === 'es' ? 'Desinstalar todas' : 'Uninstall all')}
+                      </button>
+                    )}
                   </div>
                 </div>
 

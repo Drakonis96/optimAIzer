@@ -8,7 +8,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { Skill, SkillSummary, parseSkillMarkdown, saveSkill, getAllSkills, getSkill } from '../skills';
+import { Skill, SkillSummary, parseSkillMarkdown, saveSkill, getAllSkills, getSkill, deleteSkill } from '../skills';
 
 // ---------------------------------------------------------------------------
 // Built-in skills directory
@@ -173,6 +173,26 @@ export function installAllBuiltinSkills(userId: string, agentId: string): Skill[
   }
 
   return installed;
+}
+
+/**
+ * Uninstall all built-in skills from an agent.
+ * Only removes skills whose IDs match a known builtin.
+ */
+export function uninstallAllBuiltinSkills(userId: string, agentId: string): string[] {
+  const builtinIds = new Set(getBuiltinSkills().map(s => s.id));
+  const agentSkills = getAllSkills(userId, agentId);
+  const removed: string[] = [];
+
+  for (const skill of agentSkills) {
+    if (builtinIds.has(skill.id)) {
+      if (deleteSkill(userId, agentId, skill.id)) {
+        removed.push(skill.id);
+      }
+    }
+  }
+
+  return removed;
 }
 
 /**
