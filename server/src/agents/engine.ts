@@ -82,7 +82,7 @@ function assistantAskedForConfirmation(history: AgentMessage[]): boolean {
 function isLikelyActionCommand(text: string): boolean {
   const normalized = (text || '').trim().toLowerCase();
   if (!normalized) return false;
-  return /\b(?:añade|agrega|crea|actualiza|borra|elimina|apaga|enciende|pon|ajusta|marca|desmarca|consulta|revisa|mira|mu[eé]strame|lee|lista|programa|recu[eé]rdame|env[ií]a)\b/i.test(normalized);
+  return /\b(?:añade|agrega|crea|genera|haz|hazme|prepara|actualiza|borra|elimina|apaga|enciende|pon|ajusta|marca|desmarca|consulta|revisa|mira|mu[eé]strame|lee|lista|programa|recu[eé]rdame|env[ií]a|generate|create|make|build)\b/i.test(normalized);
 }
 
 function responseAsksConfirmation(text: string): boolean {
@@ -622,7 +622,9 @@ REGLAS CLAVE:
 - Si falta un dato crítico, haz una pregunta concreta.
 - Para acciones sensibles o con terceros, muestra borrador breve y pide: "¿Confirmas?".
 - Si una herramienta falla, explica breve, propone alternativa y pide el mínimo dato faltante.
-- Para crear documentos (Word, PDF, PowerPoint, Excel), usa SIEMPRE las herramientas create_word, create_pdf, create_powerpoint o create_excel. NUNCA generes código/scripts. Incluye en tu respuesta el enlace de descarga que devuelve la herramienta.
+- Para crear documentos (Word, PDF, PowerPoint, Excel), usa SIEMPRE las herramientas create_word, create_pdf, create_powerpoint o create_excel. NUNCA uses execute_code, bash, Python, ni ningún otro lenguaje de programación para generar documentos. La herramienta nativa es OBLIGATORIA. Incluye en tu respuesta el enlace de descarga que devuelve la herramienta.
+- Para editar documentos existentes, usa edit_word o edit_powerpoint.
+- FORMATO WORD: Cuando el usuario pida formato específico (justificado, interlineado, sangría, etc.), usa SIEMPRE el parámetro "formatting" de create_word con los valores correspondientes.
 - PLAN DE ACTUACIÓN: Antes de crear o editar cualquier documento, genera un plan paso a paso visible para el usuario que incluya: objetivo, estructura propuesta, contenido clave de cada sección y formato/estilo a aplicar. Luego ejecuta el plan.
 
 FLUJO:
@@ -637,7 +639,9 @@ KEY RULES:
 - If critical data is missing, ask one focused question.
 - For sensitive or third-party actions, show a brief draft and ask: "Do you confirm?".
 - If a tool fails, explain briefly, propose an alternative, and ask only for missing data.
-- To create documents (Word, PDF, PowerPoint, Excel), ALWAYS use the create_word, create_pdf, create_powerpoint or create_excel tools. NEVER generate code/scripts. Include in your response the download link returned by the tool.
+- To create documents (Word, PDF, PowerPoint, Excel), ALWAYS use the create_word, create_pdf, create_powerpoint or create_excel tools. NEVER use execute_code, bash, Python, or any other programming language to generate documents. The native tool is MANDATORY. Include in your response the download link returned by the tool.
+- To edit existing documents, use edit_word or edit_powerpoint.
+- WORD FORMATTING: When the user requests specific formatting (justified, line spacing, indentation, etc.), ALWAYS use the "formatting" parameter of create_word.
 - ACTION PLAN: Before creating or editing any document, generate a visible step-by-step plan for the user including: objective, proposed structure, key content for each section, and formatting/style to apply. Then execute the plan.
 
 WORKFLOW:
@@ -1124,7 +1128,7 @@ const nativeTools = buildNativeToolDefinitions(context.mcpManager?.allTools);
         // force a retry with an explicit instruction to use the tools.
         if (finalChunk && iterations < maxToolIterations && !anyToolCalledInSession) {
           const promisesExecutionButNoTool = /^(?:voy\s+a|te\s+voy\s+a|ahora\s+voy\s+a|i\s+will|i'll|let\s+me)\b/i.test(finalChunk)
-            || /\b(?:voy\s+a\s+crear|voy\s+a\s+enviar|voy\s+a\s+buscar|voy\s+a\s+ejecutar|i\s+will\s+create|i\s+will\s+send|i\s+will\s+search|i\s+will\s+run)\b/i.test(finalChunk);
+            || /\b(?:voy\s+a\s+(?:crear|enviar|buscar|ejecutar|generar|preparar)|i\s+will\s+(?:create|send|search|run|generate|prepare))\b/i.test(finalChunk);
 
           if (isActionFastPath && promisesExecutionButNoTool) {
             console.warn(`[Agent:${config.name}] Forced tool execution retry: action request answered with promise text but no tool call (iteration ${iterations}).`);
@@ -1155,8 +1159,8 @@ const nativeTools = buildNativeToolDefinitions(context.mcpManager?.allTools);
             continue;
           }
 
-          const claimsAction = /(?:(?:he|ya)\s+(?:creado|añadido|guardado|registrado|programado|eliminado|actualizado|marcado)|evento\s+creado|nota\s+creada|lista\s+creada|gasto\s+registrado|recordatorio\s+(?:creado|programado)|ya\s+est[aá]\s+(?:creado|guardad[oa]|añadid[oa]|registrad[oa])|creado\s+(?:el|la|un|una)\s+(?:evento|nota|lista|recordatorio|gasto)|listo[.,!]?\s*(?:evento|nota|lista|recordatorio|gasto)?|✅\s*(?:listo|creado|guardado|añadido|registrado))/i.test(finalChunk);
-          const actionRelated = /calendario|calendar|icloud|google\s*calendar|evento|nota|lista|gasto|recordatorio|tarea/i.test(finalChunk);
+          const claimsAction = /(?:(?:he|ya)\s+(?:creado|añadido|guardado|registrado|programado|eliminado|actualizado|marcado|generado)|evento\s+creado|nota\s+creada|lista\s+creada|gasto\s+registrado|recordatorio\s+(?:creado|programado)|presentaci[oó]n\s+creada|powerpoint\s+cread[oa]|archivo\s+(?:generado|creado)|word\s+cread[oa]|pdf\s+cread[oa]|excel\s+cread[oa]|documento\s+(?:creado|generado)|ya\s+est[aá]\s+(?:creado|guardad[oa]|añadid[oa]|registrad[oa]|generad[oa])|creado\s+(?:el|la|un|una)\s+(?:evento|nota|lista|recordatorio|gasto|presentaci[oó]n|documento|archivo)|listo[.,!]?\s*(?:evento|nota|lista|recordatorio|gasto)?|✅\s*(?:listo|creado|guardado|añadido|registrado|generado)|el\s+archivo\s+est[aá]\s+listo|file\s+(?:created|generated)|presentation\s+created)/i.test(finalChunk);
+          const actionRelated = /calendario|calendar|icloud|google\s*calendar|evento|nota|lista|gasto|recordatorio|tarea|powerpoint|pptx|presentaci[oó]n|presentacion|diapositiva|slide|documento|document|word|docx|pdf|excel|xlsx|archivo|file/i.test(finalChunk);
 
           if (claimsAction && actionRelated) {
             console.warn(`[Agent:${config.name}] Anti-hallucination: LLM claimed data action without tool call (iteration ${iterations}). Forcing retry.`);
@@ -1168,7 +1172,7 @@ const nativeTools = buildNativeToolDefinitions(context.mcpManager?.allTools);
             });
             history.push({
               role: 'tool_result' as any,
-              content: `ERROR CRÍTICO: Has dicho que realizaste una acción (crear evento, guardar nota, crear lista, registrar gasto, crear recordatorio, etc.), pero NO llamaste a NINGUNA herramienta. Esto es INACEPTABLE. DEBES usar las herramientas disponibles para realizar acciones reales. NO puedes decir que has hecho algo sin llamar a la herramienta correspondiente. Llama a la herramienta correcta AHORA.`,
+              content: `ERROR CRÍTICO: Has dicho que realizaste una acción (crear evento, guardar nota, crear lista, registrar gasto, crear recordatorio, crear documento/PowerPoint/Word/PDF/Excel, etc.), pero NO llamaste a NINGUNA herramienta. Esto es INACEPTABLE. DEBES usar las herramientas disponibles para realizar acciones reales. NO puedes decir que has hecho algo sin llamar a la herramienta correspondiente. Para documentos, usa SIEMPRE create_powerpoint, create_word, create_pdf o create_excel. Llama a la herramienta correcta AHORA.`,
               timestamp: Date.now(),
             });
             continue; // Retry the LLM call

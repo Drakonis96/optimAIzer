@@ -304,12 +304,13 @@ const CHAT_TOOL_MAX_ITERATIONS = 6;
 const CHAT_DOCUMENT_TOOL_DEFS: NativeFunctionTool[] = [
   {
     name: 'create_word',
-    description: 'Crea un documento Word (.docx) con contenido estructurado. Devuelve un enlace de descarga. NUNCA generes código; usa SIEMPRE esta herramienta.',
+    description: 'Crea un documento Word (.docx) con contenido estructurado y formato profesional (alineación, interlineado, sangría, espaciado, fuente). Devuelve un enlace de descarga. NUNCA generes código; usa SIEMPRE esta herramienta.',
     parameters: {
       type: 'object',
       properties: {
         file_name: { type: 'string', description: 'Nombre del archivo (ej: "informe.docx")' },
-        content: { type: 'string', description: 'JSON array de bloques: [{"type":"heading"|"paragraph"|"bullet"|"table", "text":"...", "level":1-6, "bold":true/false, "italic":true/false, "rows":[["c1","c2"]]}]' },
+        content: { type: 'string', description: 'JSON array de bloques: [{"type":"heading"|"paragraph"|"bullet"|"table", "text":"...", "level":1-6, "bold":true/false, "italic":true/false, "underline":true/false, "rows":[["c1","c2"]], "alignment":"justified", "lineSpacing":1.5, "spacingBefore":0, "spacingAfter":0, "firstLineIndent":1.25, "fontSize":12, "fontFamily":"Arial"}]' },
+        formatting: { type: 'string', description: 'JSON objeto con formato global: {"alignment":"left"|"center"|"right"|"justified", "lineSpacing":1.5, "spacingBefore":0, "spacingAfter":0, "firstLineIndent":1.25, "fontSize":12, "fontFamily":"Times New Roman"}. Se aplica a todos los párrafos salvo que el bloque lo sobrescriba.' },
       },
       required: ['file_name', 'content'],
     },
@@ -328,12 +329,12 @@ const CHAT_DOCUMENT_TOOL_DEFS: NativeFunctionTool[] = [
   },
   {
     name: 'create_powerpoint',
-    description: 'Crea una presentación PowerPoint (.pptx). Devuelve un enlace de descarga. Usa fetch_image para incluir imágenes de internet. NUNCA generes código.',
+    description: 'Crea una presentación PowerPoint (.pptx) con diapositivas, títulos, notas del presentador, imágenes, viñetas, diseño a dos columnas. Usa fetch_image para incluir imágenes de internet. Devuelve un enlace de descarga. NUNCA generes código Python u otro lenguaje; usa SIEMPRE esta herramienta.',
     parameters: {
       type: 'object',
       properties: {
         file_name: { type: 'string', description: 'Nombre del archivo (ej: "presentacion.pptx")' },
-        slides: { type: 'string', description: 'JSON array de slides: [{"title":"...", "subtitle":"...", "content":"...", "layout":"title"|"content"|"section"|"blank"|"two_column", "bulletPoints":["..."], "images":[{"base64":"data:...","x":1,"y":1.5,"w":4,"h":3,"caption":"..."}]}]' },
+        slides: { type: 'string', description: 'JSON array de slides: [{"title":"...", "subtitle":"...", "content":"...", "notes":"Notas del presentador aquí", "layout":"title"|"content"|"section"|"blank"|"two_column", "bulletPoints":["..."], "leftColumn":"...", "rightColumn":"...", "backgroundColor":"#FFFFFF", "fontColor":"363636", "images":[{"base64":"data:...","x":1,"y":1.5,"w":4,"h":3,"caption":"..."}]}]' },
         title: { type: 'string', description: 'Título de la presentación (metadato, opcional)' },
       },
       required: ['file_name', 'slides'],
@@ -341,12 +342,12 @@ const CHAT_DOCUMENT_TOOL_DEFS: NativeFunctionTool[] = [
   },
   {
     name: 'create_excel',
-    description: 'Crea un archivo Excel (.xlsx). Devuelve un enlace de descarga. NUNCA generes código.',
+    description: 'Crea un archivo Excel (.xlsx) con fórmulas, formato y múltiples hojas. Devuelve un enlace de descarga. NUNCA generes código.',
     parameters: {
       type: 'object',
       properties: {
         file_name: { type: 'string', description: 'Nombre del archivo (ej: "datos.xlsx")' },
-        sheets: { type: 'string', description: 'JSON array de hojas: [{"name":"Hoja1","headers":["Col1","Col2"],"rows":[["v1","v2"]],"columnWidths":[15,20]}]' },
+        sheets: { type: 'string', description: 'JSON array de hojas: [{"name":"Hoja1","headers":["Col1","Col2"],"rows":[["v1","v2"]],"columnWidths":[15,20],"formulas":[{"cell":"C2","formula":"SUM(A2:B2)"}]}]' },
       },
       required: ['file_name', 'sheets'],
     },
@@ -386,7 +387,10 @@ async function executeChatDocumentTool(
       const fileName = params.file_name as string;
       if (!fileName || !params.content) return 'Error: faltan parámetros file_name o content';
       const content = typeof params.content === 'string' ? JSON.parse(params.content) : params.content;
-      const result = await documentTools.createWord({ userId, agentId: CHAT_AGENT_ID, fileName, content });
+      const formatting = params.formatting
+        ? (typeof params.formatting === 'string' ? JSON.parse(params.formatting) : params.formatting)
+        : undefined;
+      const result = await documentTools.createWord({ userId, agentId: CHAT_AGENT_ID, fileName, content, formatting });
       const safeName = path.basename(fileName);
       const downloadUrl = `/api/agents/${encodeURIComponent(CHAT_AGENT_ID)}/documents/${encodeURIComponent(safeName)}`;
       return `✅ Documento Word creado (${(result.size / 1024).toFixed(1)} KB).\n\n📥 [Descargar ${safeName}](${downloadUrl})`;
@@ -457,7 +461,7 @@ async function executeChatDocumentTool(
   }
 }
 
-const CHAT_DOC_SYSTEM_SUFFIX = `\n\nTienes acceso a herramientas para crear documentos (Word, PDF, PowerPoint, Excel) y descargar/analizar imágenes. Cuando el usuario pida crear un documento, usa SIEMPRE las herramientas disponibles. NUNCA generes código o scripts para crear documentos. Incluye siempre en tu respuesta el enlace de descarga que devuelve la herramienta.\n\nPLAN DE ACTUACIÓN: Antes de crear o editar cualquier documento, genera primero un plan paso a paso visible para el usuario que incluya: objetivo del documento, estructura propuesta (secciones/hojas/diapositivas), contenido clave de cada parte y formato/estilo a aplicar. Luego ejecuta el plan usando las herramientas.`;
+const CHAT_DOC_SYSTEM_SUFFIX = `\n\nTienes acceso a herramientas para crear documentos (Word, PDF, PowerPoint, Excel) y descargar/analizar imágenes. Cuando el usuario pida crear un documento, usa SIEMPRE las herramientas disponibles (create_word, create_pdf, create_powerpoint, create_excel). NUNCA uses execute_code, bash, Python, ni ningún otro lenguaje de programación para generar documentos. La herramienta nativa es OBLIGATORIA. Incluye siempre en tu respuesta el enlace de descarga que devuelve la herramienta.\n\nFORMATO WORD: Cuando el usuario pida formato específico (justificado, interlineado 1.5, sangría, sin separación entre párrafos, etc.), usa SIEMPRE el parámetro "formatting" de create_word. Ejemplo: formatting={"alignment":"justified","lineSpacing":1.5,"spacingBefore":0,"spacingAfter":0,"firstLineIndent":1.25,"fontSize":12,"fontFamily":"Times New Roman"}\n\nPLAN DE ACTUACIÓN: Antes de crear o editar cualquier documento, genera primero un plan paso a paso visible para el usuario que incluya: objetivo del documento, estructura propuesta (secciones/hojas/diapositivas), contenido clave de cada parte y formato/estilo a aplicar. Luego ejecuta el plan usando las herramientas.`;
 
 /**
  * POST /api/chat

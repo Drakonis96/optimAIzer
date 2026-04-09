@@ -1925,11 +1925,15 @@ agentsRouter.get('/:id/documents/:fileName', (req: Request, res: Response) => {
     return;
   }
 
-  const DATA_DIR = process.env.DATA_DIR || '/data';
-  const filePath = path.join(DATA_DIR, 'agents', userId, agentId, 'documents', fileName);
+  // Use the same data root as documentTools.ts / storage.ts
+  const explicitRoot = (process.env.OPTIMAIZER_AGENTS_DATA_ROOT || '').trim();
+  const agentsDataRoot = explicitRoot
+    ? path.resolve(explicitRoot)
+    : path.resolve(__dirname, '../../../data/agents');
+  const filePath = path.join(agentsDataRoot, userId, agentId, 'documents', fileName);
 
   // Verify the resolved path is within the expected directory
-  const documentsDir = path.join(DATA_DIR, 'agents', userId, agentId, 'documents');
+  const documentsDir = path.join(agentsDataRoot, userId, agentId, 'documents');
   if (!path.resolve(filePath).startsWith(path.resolve(documentsDir))) {
     res.status(400).json({ error: 'Invalid file path' });
     return;

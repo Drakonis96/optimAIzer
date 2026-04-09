@@ -1060,10 +1060,21 @@ export const AGENT_TOOLS: ToolDefinition[] = [
   {
     name: 'create_word',
     description:
-      'Crea un documento Word (.docx) con contenido estructurado: encabezados, párrafos, listas con viñetas, tablas, negritas, cursivas y estilos. Devuelve un enlace de descarga que DEBES incluir tal cual en tu respuesta al usuario. NUNCA generes código Python u otro lenguaje para crear documentos; usa SIEMPRE esta herramienta.',
+      'Crea un documento Word (.docx) con contenido estructurado y formato profesional: encabezados, párrafos, listas con viñetas, tablas, negritas, cursivas, subrayado y estilos. Soporta formato de documento completo: alineación (justificado, centrado, etc.), interlineado (1.0, 1.5, 2.0), espaciado entre párrafos en puntos, sangría de primera línea en cm, tamaño de fuente y familia tipográfica. Usa SIEMPRE el parámetro "formatting" para aplicar formato global al documento. Cuando el usuario pida texto justificado, interlineado 1.5, sin separación entre párrafos y con sangría, usa: formatting={"alignment":"justified","lineSpacing":1.5,"spacingBefore":0,"spacingAfter":0,"firstLineIndent":1.25}. Devuelve un enlace de descarga que DEBES incluir tal cual en tu respuesta al usuario. NUNCA generes código Python u otro lenguaje para crear documentos; usa SIEMPRE esta herramienta.',
     parameters: {
       file_name: { type: 'string', description: 'Nombre del archivo de salida (ej: "informe.docx")', required: true },
-      content: { type: 'string', description: 'JSON array de bloques de contenido. Cada bloque: {"type":"heading"|"paragraph"|"bullet"|"table", "text":"...", "level":1-6, "bold":true/false, "italic":true/false, "style":"...", "rows":[["c1","c2"],["c3","c4"]]}', required: true },
+      content: { type: 'string', description: 'JSON array de bloques de contenido. Cada bloque: {"type":"heading"|"paragraph"|"bullet"|"table", "text":"...", "level":1-6, "bold":true/false, "italic":true/false, "underline":true/false, "style":"...", "rows":[["c1","c2"],["c3","c4"]], "alignment":"justified", "lineSpacing":1.5, "spacingBefore":0, "spacingAfter":0, "firstLineIndent":1.25, "fontSize":12, "fontFamily":"Arial"}. Las propiedades de formato por bloque sobrescriben las del documento.', required: true },
+      formatting: { type: 'string', description: 'JSON objeto con formato global del documento (se aplica a TODOS los párrafos salvo que el bloque lo sobrescriba). Campos: {"alignment":"left"|"center"|"right"|"justified", "lineSpacing":1.5, "spacingBefore":0, "spacingAfter":0, "firstLineIndent":1.25, "fontSize":12, "fontFamily":"Arial"}. Ejemplo para formato académico: {"alignment":"justified","lineSpacing":1.5,"spacingBefore":0,"spacingAfter":0,"firstLineIndent":1.25,"fontSize":12,"fontFamily":"Times New Roman"}', required: false },
+    },
+  },
+  {
+    name: 'edit_word',
+    description:
+      'Edita un documento Word (.docx) existente: reemplazar texto, añadir párrafos, y aplicar formato global (alineación, interlineado, espaciado, sangría) a todo el documento. Devuelve un enlace de descarga que DEBES incluir tal cual en tu respuesta al usuario.',
+    parameters: {
+      source_file_path: { type: 'string', description: 'Ruta al archivo Word original', required: true },
+      output_file_name: { type: 'string', description: 'Nombre del archivo de salida', required: true },
+      operations: { type: 'string', description: 'JSON array de operaciones. Cada una: {"type":"replace_text"|"append_paragraph"|"set_formatting", "find":"texto a buscar", "replace":"texto nuevo", "text":"párrafo a añadir", "bold":true/false, "italic":true/false, "formatting":{"alignment":"justified","lineSpacing":1.5,"spacingBefore":0,"spacingAfter":0,"firstLineIndent":1.25}}', required: true },
     },
   },
   {
@@ -1103,6 +1114,16 @@ export const AGENT_TOOLS: ToolDefinition[] = [
       title: { type: 'string', description: 'Título de la presentación (metadato)', required: false },
       author: { type: 'string', description: 'Autor de la presentación (metadato)', required: false },
       subject: { type: 'string', description: 'Asunto de la presentación (metadato)', required: false },
+    },
+  },
+  {
+    name: 'edit_powerpoint',
+    description:
+      'Edita una presentación PowerPoint (.pptx) existente: cambiar notas del presentador, reemplazar texto en diapositivas y modificar títulos. Ideal para actualizar presentaciones ya creadas sin recrearlas desde cero. Devuelve un enlace de descarga que DEBES incluir tal cual en tu respuesta al usuario.',
+    parameters: {
+      source_file_path: { type: 'string', description: 'Ruta al archivo PowerPoint original', required: true },
+      output_file_name: { type: 'string', description: 'Nombre del archivo de salida', required: true },
+      operations: { type: 'string', description: 'JSON array de operaciones. Cada una: {"type":"set_notes"|"replace_text"|"set_title", "slide":1, "notes":"Nuevas notas del presentador", "find":"texto a buscar", "replace":"texto nuevo", "title":"Nuevo título"}. El campo "slide" es el número de diapositiva (empezando en 1).', required: true },
     },
   },
   {
@@ -5620,13 +5641,34 @@ export async function executeTool(
         if (!params.content) return { name, success: false, result: '', error: 'Falta el parámetro "content"' };
         try {
           const content = typeof params.content === 'string' ? JSON.parse(params.content) : params.content;
-          const result = await documentTools.createWord({ userId, agentId, fileName, content });
+          const formatting = params.formatting
+            ? (typeof params.formatting === 'string' ? JSON.parse(params.formatting) : params.formatting)
+            : undefined;
+          const result = await documentTools.createWord({ userId, agentId, fileName, content, formatting });
           recordResourceEvent('agent_tool_call', { tool: name, success: true });
           const safeName = require('path').basename(fileName);
           const downloadUrl = `/api/agents/${encodeURIComponent(agentId)}/documents/${encodeURIComponent(safeName)}`;
           return { name, success: true, result: `✅ Documento Word creado (${(result.size / 1024).toFixed(1)} KB).\n\n📥 [Descargar ${safeName}](${downloadUrl})` };
         } catch (err: any) {
           return { name, success: false, result: '', error: `Error creando Word: ${err.message}` };
+        }
+      }
+
+      case 'edit_word': {
+        const sourceFilePath = params.source_file_path;
+        const outputFileName = params.output_file_name;
+        if (!sourceFilePath) return { name, success: false, result: '', error: 'Falta el parámetro "source_file_path"' };
+        if (!outputFileName) return { name, success: false, result: '', error: 'Falta el parámetro "output_file_name"' };
+        if (!params.operations) return { name, success: false, result: '', error: 'Falta el parámetro "operations"' };
+        try {
+          const operations = typeof params.operations === 'string' ? JSON.parse(params.operations) : params.operations;
+          const result = await documentTools.editWord({ userId, agentId, sourceFilePath, outputFileName, operations });
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          const safeName = require('path').basename(outputFileName);
+          const downloadUrl = `/api/agents/${encodeURIComponent(agentId)}/documents/${encodeURIComponent(safeName)}`;
+          return { name, success: true, result: `✅ Documento Word editado (${(result.size / 1024).toFixed(1)} KB) — ${operations.length} operación(es).\n\n📥 [Descargar ${safeName}](${downloadUrl})` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error editando Word: ${err.message}` };
         }
       }
 
@@ -5699,6 +5741,24 @@ export async function executeTool(
           return { name, success: true, result: `✅ PowerPoint creado (${(result.size / 1024).toFixed(1)} KB) — ${slides.length} diapositivas.\n\n📥 [Descargar ${safePptxName}](${pptxDownloadUrl})` };
         } catch (err: any) {
           return { name, success: false, result: '', error: `Error creando PowerPoint: ${err.message}` };
+        }
+      }
+
+      case 'edit_powerpoint': {
+        const sourceFilePath = params.source_file_path;
+        const outputFileName = params.output_file_name;
+        if (!sourceFilePath) return { name, success: false, result: '', error: 'Falta el parámetro "source_file_path"' };
+        if (!outputFileName) return { name, success: false, result: '', error: 'Falta el parámetro "output_file_name"' };
+        if (!params.operations) return { name, success: false, result: '', error: 'Falta el parámetro "operations"' };
+        try {
+          const operations = typeof params.operations === 'string' ? JSON.parse(params.operations) : params.operations;
+          const result = await documentTools.editPowerPoint({ userId, agentId, sourceFilePath, outputFileName, operations });
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          const safeName = require('path').basename(outputFileName);
+          const downloadUrl = `/api/agents/${encodeURIComponent(agentId)}/documents/${encodeURIComponent(safeName)}`;
+          return { name, success: true, result: `✅ PowerPoint editado (${(result.size / 1024).toFixed(1)} KB) — ${operations.length} operación(es).\n\n📥 [Descargar ${safeName}](${downloadUrl})` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error editando PowerPoint: ${err.message}` };
         }
       }
 

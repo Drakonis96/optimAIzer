@@ -8,11 +8,17 @@ import { secureTemporaryFilePath } from '../security/terminalSecurity';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const DATA_DIR = process.env.DATA_DIR || '/data';
+/** Resolve the root directory for agent data — same logic as storage.ts */
+function resolveAgentsDataRoot(): string {
+  const path = require('path');
+  const explicitRoot = (process.env.OPTIMAIZER_AGENTS_DATA_ROOT || '').trim();
+  if (explicitRoot) return path.resolve(explicitRoot);
+  return path.resolve(__dirname, '../../../data/agents');
+}
 
 function agentOutputDir(userId: string, agentId: string): string {
   const path = require('path');
-  const dir = path.join(DATA_DIR, 'agents', userId, agentId, 'documents');
+  const dir = path.join(resolveAgentsDataRoot(), userId, agentId, 'documents');
   const fs = require('fs');
   fs.mkdirSync(dir, { recursive: true });
   return dir;
@@ -62,6 +68,46 @@ export async function readWord(filePath: string): Promise<{
 // Word (.docx) — Create / Edit
 // ---------------------------------------------------------------------------
 
+/** Map user-friendly alignment string to docx AlignmentType */
+function resolveAlignment(docx: any, align?: string): any {
+  if (!align) return undefined;
+  const map: Record<string, string> = {
+    left: 'LEFT',
+    center: 'CENTER',
+    right: 'RIGHT',
+    justified: 'JUSTIFIED',
+    justify: 'JUSTIFIED',
+    both: 'JUSTIFIED',
+  };
+  const key = map[align.toLowerCase()];
+  return key ? docx.AlignmentType[key] : undefined;
+}
+
+/** Convert line-spacing multiplier (1.0, 1.5, 2.0) to 240ths-of-a-line */
+function lineSpacingToTwips(multiplier: number): number {
+  return Math.round(multiplier * 240);
+}
+
+/** Convert points to twips (1 pt = 20 twips) */
+function pointsToTwips(pts: number): number {
+  return Math.round(pts * 20);
+}
+
+/** Convert centimetres to twips (1 cm ≈ 567 twips) */
+function cmToTwips(cm: number): number {
+  return Math.round(cm * 567);
+}
+
+interface WordFormatting {
+  alignment?: 'left' | 'center' | 'right' | 'justified';
+  lineSpacing?: number;      // multiplier: 1.0, 1.15, 1.5, 2.0 …
+  spacingBefore?: number;    // points
+  spacingAfter?: number;     // points
+  firstLineIndent?: number;  // centimetres
+  fontSize?: number;         // points
+  fontFamily?: string;
+}
+
 export async function createWord(params: {
   userId: string;
   agentId: string;
@@ -73,13 +119,66 @@ export async function createWord(params: {
     style?: string;
     bold?: boolean;
     italic?: boolean;
+    underline?: boolean;
     rows?: string[][];
+    // Per-block formatting overrides
+    alignment?: string;
+    lineSpacing?: number;
+    spacingBefore?: number;
+    spacingAfter?: number;
+    firstLineIndent?: number;
+    fontSize?: number;
+    fontFamily?: string;
   }>;
+  formatting?: WordFormatting;
 }): Promise<{ filePath: string; size: number }> {
   const docx = await import('docx');
   const fs = await import('fs');
 
+  const fmt = params.formatting || {};
   const children: any[] = [];
+
+  /** Build spacing object from defaults + per-block overrides */
+  const buildSpacing = (block: any) => {
+    const ls = block.lineSpacing ?? fmt.lineSpacing;
+    const sb = block.spacingBefore ?? fmt.spacingBefore;
+    const sa = block.spacingAfter ?? fmt.spacingAfter;
+    if (ls == null && sb == null && sa == null) return undefined;
+    const obj: any = {};
+    if (ls != null) {
+      obj.line = lineSpacingToTwips(ls);
+      obj.lineRule = docx.LineRuleType.AUTO;
+    }
+    if (sb != null) obj.before = pointsToTwips(sb);
+    if (sa != null) obj.after = pointsToTwips(sa);
+    return obj;
+  };
+
+  /** Build indent object from defaults + per-block overrides */
+  const buildIndent = (block: any) => {
+    const fli = block.firstLineIndent ?? fmt.firstLineIndent;
+    if (fli == null) return undefined;
+    return { firstLine: cmToTwips(fli) };
+  };
+
+  /** Resolve alignment for a block (block override > document default) */
+  const blockAlignment = (block: any) =>
+    resolveAlignment(docx, block.alignment ?? fmt.alignment);
+
+  /** Build a TextRun for a given block, respecting font defaults */
+  const buildTextRun = (block: any) => {
+    const opts: any = {
+      text: block.text || '',
+      bold: block.bold,
+      italics: block.italic,
+    };
+    if (block.underline) opts.underline = { type: docx.UnderlineType.SINGLE };
+    const size = block.fontSize ?? fmt.fontSize;
+    if (size) opts.size = size * 2; // docx uses half-points
+    const font = block.fontFamily ?? fmt.fontFamily;
+    if (font) opts.font = font;
+    return new docx.TextRun(opts);
+  };
 
   for (const block of params.content) {
     switch (block.type) {
@@ -87,45 +186,59 @@ export async function createWord(params: {
         const headingLevel = block.level && block.level >= 1 && block.level <= 6
           ? (`HEADING_${block.level}` as keyof typeof docx.HeadingLevel)
           : 'HEADING_1';
-        children.push(
-          new docx.Paragraph({
-            text: block.text || '',
-            heading: docx.HeadingLevel[headingLevel as keyof typeof docx.HeadingLevel],
-          })
-        );
+        const headingOpts: any = {
+          children: [buildTextRun(block)],
+          heading: docx.HeadingLevel[headingLevel as keyof typeof docx.HeadingLevel],
+        };
+        const ha = resolveAlignment(docx, block.alignment);
+        if (ha) headingOpts.alignment = ha;
+        const hs = buildSpacing(block);
+        if (hs) headingOpts.spacing = hs;
+        children.push(new docx.Paragraph(headingOpts));
         break;
       }
       case 'paragraph': {
-        const runs: any[] = [];
-        runs.push(
-          new docx.TextRun({
-            text: block.text || '',
-            bold: block.bold,
-            italics: block.italic,
-          })
-        );
-        children.push(new docx.Paragraph({ children: runs, style: block.style }));
+        const paraOpts: any = {
+          children: [buildTextRun(block)],
+          style: block.style,
+        };
+        const pa = blockAlignment(block);
+        if (pa) paraOpts.alignment = pa;
+        const ps = buildSpacing(block);
+        if (ps) paraOpts.spacing = ps;
+        const pi = buildIndent(block);
+        if (pi) paraOpts.indent = pi;
+        children.push(new docx.Paragraph(paraOpts));
         break;
       }
       case 'bullet': {
-        children.push(
-          new docx.Paragraph({
-            text: block.text || '',
-            bullet: { level: (block.level || 1) - 1 },
-          })
-        );
+        const bulletOpts: any = {
+          children: [buildTextRun(block)],
+          bullet: { level: (block.level || 1) - 1 },
+        };
+        const ba = blockAlignment(block);
+        if (ba) bulletOpts.alignment = ba;
+        const bs = buildSpacing(block);
+        if (bs) bulletOpts.spacing = bs;
+        children.push(new docx.Paragraph(bulletOpts));
         break;
       }
       case 'table': {
         if (block.rows && block.rows.length > 0) {
+          const tblAlignment = blockAlignment(block);
+          const tblSpacing = buildSpacing(block);
           const tableRows = block.rows.map(
             (row) =>
               new docx.TableRow({
                 children: row.map(
-                  (cell) =>
-                    new docx.TableCell({
-                      children: [new docx.Paragraph({ text: cell })],
-                    })
+                  (cell) => {
+                    const cellParaOpts: any = { text: cell };
+                    if (tblAlignment) cellParaOpts.alignment = tblAlignment;
+                    if (tblSpacing) cellParaOpts.spacing = tblSpacing;
+                    return new docx.TableCell({
+                      children: [new docx.Paragraph(cellParaOpts)],
+                    });
+                  }
                 ),
               })
           );
@@ -145,6 +258,127 @@ export async function createWord(params: {
   fs.writeFileSync(dest, buffer);
 
   return { filePath: dest, size: buffer.length };
+}
+
+// ---------------------------------------------------------------------------
+// Word (.docx) — Edit existing document
+// ---------------------------------------------------------------------------
+
+export async function editWord(params: {
+  userId: string;
+  agentId: string;
+  sourceFilePath: string;
+  outputFileName: string;
+  operations: Array<{
+    type: 'replace_text' | 'append_paragraph' | 'set_formatting';
+    /** For replace_text: the text to find */
+    find?: string;
+    /** For replace_text: the replacement text */
+    replace?: string;
+    /** For append_paragraph: text to add */
+    text?: string;
+    bold?: boolean;
+    italic?: boolean;
+    /** For set_formatting: applies document-wide formatting */
+    formatting?: WordFormatting;
+  }>;
+}): Promise<{ filePath: string; size: number }> {
+  const JSZip = (await import('jszip')).default;
+  const fs = await import('fs');
+  const path = await import('path');
+
+  const data = fs.readFileSync(params.sourceFilePath);
+  const zip = await JSZip.loadAsync(data);
+
+  for (const op of params.operations) {
+    switch (op.type) {
+      case 'replace_text': {
+        if (!op.find) break;
+        // Replace in main document body
+        const docXml = await zip.file('word/document.xml')?.async('string');
+        if (docXml) {
+          // XML-escape the search/replace strings for safety
+          const escapedFind = op.find.replace(/[&<>"']/g, (c) =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c] || c));
+          const escapedReplace = (op.replace || '').replace(/[&<>"']/g, (c) =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c] || c));
+          const newXml = docXml.split(escapedFind).join(escapedReplace);
+          zip.file('word/document.xml', newXml);
+        }
+        break;
+      }
+      case 'append_paragraph': {
+        const docXml = await zip.file('word/document.xml')?.async('string');
+        if (docXml && op.text) {
+          // Build a <w:p> element with optional bold/italic
+          let runProps = '';
+          if (op.bold) runProps += '<w:b/>';
+          if (op.italic) runProps += '<w:i/>';
+          const rPr = runProps ? `<w:rPr>${runProps}</w:rPr>` : '';
+          const newPara = `<w:p><w:r>${rPr}<w:t xml:space="preserve">${
+            op.text.replace(/[&<>"']/g, (c) =>
+              ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c] || c))
+          }</w:t></w:r></w:p>`;
+          // Insert before closing </w:body>
+          const newDoc = docXml.replace('</w:body>', newPara + '</w:body>');
+          zip.file('word/document.xml', newDoc);
+        }
+        break;
+      }
+      case 'set_formatting': {
+        const docXml = await zip.file('word/document.xml')?.async('string');
+        if (docXml && op.formatting) {
+          let modified = docXml;
+          const f = op.formatting;
+
+          // Build pPr XML snippet for formatting
+          let pPrContent = '';
+          if (f.alignment) {
+            const jcMap: Record<string, string> = {
+              left: 'left', center: 'center', right: 'right',
+              justified: 'both', justify: 'both', both: 'both',
+            };
+            pPrContent += `<w:jc w:val="${jcMap[f.alignment] || 'left'}"/>`;
+          }
+          if (f.lineSpacing != null || f.spacingBefore != null || f.spacingAfter != null) {
+            let spacingAttrs = '';
+            if (f.lineSpacing != null) spacingAttrs += ` w:line="${lineSpacingToTwips(f.lineSpacing)}" w:lineRule="auto"`;
+            if (f.spacingBefore != null) spacingAttrs += ` w:before="${pointsToTwips(f.spacingBefore)}"`;
+            if (f.spacingAfter != null) spacingAttrs += ` w:after="${pointsToTwips(f.spacingAfter)}"`;
+            pPrContent += `<w:spacing${spacingAttrs}/>`;
+          }
+          if (f.firstLineIndent != null) {
+            pPrContent += `<w:ind w:firstLine="${cmToTwips(f.firstLineIndent)}"/>`;
+          }
+
+          if (pPrContent) {
+            // Add/replace pPr in every <w:p> element
+            // Strategy: insert pPr after each <w:p> opening tag where no <w:pPr> exists,
+            // and augment existing <w:pPr> blocks.
+            
+            // For paragraphs WITHOUT existing <w:pPr>: add one
+            modified = modified.replace(/<w:p(?:\s[^>]*)?>(?![\s\S]*?<w:pPr)/g, (match) => {
+              return match + `<w:pPr>${pPrContent}</w:pPr>`;
+            });
+
+            // For paragraphs WITH existing <w:pPr>: inject our properties before </w:pPr>
+            // (existing properties will take precedence if there are duplicates in some parsers,
+            //  but we insert at the beginning to override)
+            modified = modified.replace(/<w:pPr>/g, `<w:pPr>${pPrContent}`);
+          }
+
+          zip.file('word/document.xml', modified);
+        }
+        break;
+      }
+    }
+  }
+
+  const outBuf = await zip.generateAsync({ type: 'nodebuffer' });
+  const dest = outputPath(params.userId, params.agentId, params.outputFileName);
+  fs.writeFileSync(dest, outBuf);
+
+  return { filePath: dest, size: outBuf.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -654,6 +888,138 @@ export async function createPowerPoint(params: {
 }
 
 // ---------------------------------------------------------------------------
+// PowerPoint (.pptx) — Edit existing presentation
+// ---------------------------------------------------------------------------
+
+export async function editPowerPoint(params: {
+  userId: string;
+  agentId: string;
+  sourceFilePath: string;
+  outputFileName: string;
+  operations: Array<{
+    type: 'set_notes' | 'replace_text' | 'set_title';
+    /** 1-based slide number */
+    slide: number;
+    /** New notes text (for set_notes) */
+    notes?: string;
+    /** Text to find (for replace_text) */
+    find?: string;
+    /** Replacement text (for replace_text / set_title) */
+    replace?: string;
+    /** New title (for set_title) */
+    title?: string;
+  }>;
+}): Promise<{ filePath: string; size: number }> {
+  const JSZip = (await import('jszip')).default;
+  const fs = await import('fs');
+
+  const data = fs.readFileSync(params.sourceFilePath);
+  const zip = await JSZip.loadAsync(data);
+
+  // Helper: XML-escape text
+  const xmlEscape = (s: string) =>
+    s.replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c] || c));
+
+  // Discover how many slides exist
+  const slideFiles = Object.keys(zip.files).filter(
+    (f) => /^ppt\/slides\/slide\d+\.xml$/.test(f)
+  ).sort();
+
+  for (const op of params.operations) {
+    const slideIdx = op.slide; // 1-based
+    if (slideIdx < 1 || slideIdx > slideFiles.length) continue;
+
+    switch (op.type) {
+      case 'set_notes': {
+        if (!op.notes) break;
+        const notesPath = `ppt/notesSlides/notesSlide${slideIdx}.xml`;
+        const escaped = xmlEscape(op.notes);
+
+        if (zip.file(notesPath)) {
+          // Notes file exists — replace the body text
+          let notesXml = await zip.file(notesPath)!.async('string');
+          // Replace content in the second <a:p> block (first is slide number placeholder)
+          // Strategy: replace all <a:t> content in the notes body
+          notesXml = notesXml.replace(
+            /(<a:t>)([\s\S]*?)(<\/a:t>)/g,
+            (match, open, _text, close, offset) => {
+              // Skip the first occurrence (slide number) by checking position
+              return `${open}${escaped}${close}`;
+            }
+          );
+          zip.file(notesPath, notesXml);
+        } else {
+          // No notes file — create one
+          const slideRelPath = `ppt/slides/_rels/slide${slideIdx}.xml.rels`;
+          const noteBody = escaped.split('\n').map(
+            (line: string) =>
+              `<a:p><a:r><a:rPr lang="es-ES" dirty="0"/><a:t>${line}</a:t></a:r></a:p>`
+          ).join('');
+
+          const notesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
+    <p:sp><p:nvSpPr><p:cNvPr id="2" name="Slide Image Placeholder 1"/><p:cNvSpPr><a:spLocks noGrp="1" noRot="1" noChangeAspect="1"/></p:cNvSpPr><p:nvPr><p:ph type="sldImg"/></p:nvPr></p:nvSpPr><p:spPr/></p:sp>
+    <p:sp><p:nvSpPr><p:cNvPr id="3" name="Notes Placeholder 2"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/>${noteBody}</p:txBody></p:sp>
+  </p:spTree></p:cSld>
+</p:notes>`;
+          zip.file(notesPath, notesXml);
+
+          // Add relationship in slide rels
+          const slideRels = await zip.file(slideRelPath)?.async('string');
+          if (slideRels) {
+            const relId = `rIdNotes${slideIdx}`;
+            if (!slideRels.includes('notesSlide')) {
+              const newRel = `<Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide${slideIdx}.xml"/>`;
+              const updated = slideRels.replace('</Relationships>', newRel + '</Relationships>');
+              zip.file(slideRelPath, updated);
+            }
+          }
+
+          // Ensure Content_Types has the notes content type
+          const ctFile = '[Content_Types].xml';
+          let ct = await zip.file(ctFile)?.async('string') || '';
+          if (!ct.includes(`/ppt/notesSlides/notesSlide${slideIdx}.xml`)) {
+            const override = `<Override PartName="/ppt/notesSlides/notesSlide${slideIdx}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml"/>`;
+            ct = ct.replace('</Types>', override + '</Types>');
+            zip.file(ctFile, ct);
+          }
+        }
+        break;
+      }
+      case 'replace_text': {
+        if (!op.find) break;
+        const slideFile = slideFiles[slideIdx - 1];
+        let slideXml = await zip.file(slideFile)!.async('string');
+        const escapedFind = xmlEscape(op.find);
+        const escapedReplace = xmlEscape(op.replace || '');
+        slideXml = slideXml.split(escapedFind).join(escapedReplace);
+        zip.file(slideFile, slideXml);
+        break;
+      }
+      case 'set_title': {
+        if (!op.title) break;
+        const slideFile = slideFiles[slideIdx - 1];
+        let slideXml = await zip.file(slideFile)!.async('string');
+        // Find the first <a:t> in a shape with ph type="title" or "ctrTitle" and replace
+        const titleRegex = /(ph type="(?:title|ctrTitle)"[\s\S]*?<a:t>)([\s\S]*?)(<\/a:t>)/;
+        const escaped = xmlEscape(op.title);
+        slideXml = slideXml.replace(titleRegex, `$1${escaped}$3`);
+        zip.file(slideFile, slideXml);
+        break;
+      }
+    }
+  }
+
+  const outBuf = await zip.generateAsync({ type: 'nodebuffer' });
+  const dest = outputPath(params.userId, params.agentId, params.outputFileName);
+  fs.writeFileSync(dest, outBuf);
+
+  return { filePath: dest, size: outBuf.length };
+}
+
+// ---------------------------------------------------------------------------
 // Excel (.xlsx) — Read
 // ---------------------------------------------------------------------------
 
@@ -783,16 +1149,24 @@ export async function createExcel(params: {
       });
     }
 
-    // Add data rows
+    // Add data rows — detect formula strings (starting with '=')
     for (const row of sheetData.rows) {
-      sheet.addRow(row);
+      const addedRow = sheet.addRow(row);
+      // Post-process: convert any cell whose value starts with '=' into a formula
+      addedRow.eachCell({ includeEmpty: false }, (cell: any) => {
+        if (typeof cell.value === 'string' && cell.value.startsWith('=')) {
+          cell.value = { formula: cell.value.slice(1), result: undefined } as any;
+        }
+      });
     }
 
     // Apply formulas
     if (sheetData.formulas) {
       for (const f of sheetData.formulas) {
         const cell = sheet.getCell(f.cell);
-        cell.value = { formula: f.formula } as any;
+        // Strip leading '=' if present — ExcelJS expects bare formulas
+        const cleanFormula = f.formula.startsWith('=') ? f.formula.slice(1) : f.formula;
+        cell.value = { formula: cleanFormula, result: undefined } as any;
       }
     }
 
@@ -871,7 +1245,8 @@ export async function editExcel(params: {
       }
       case 'set_formula': {
         if (sheet && op.cell && op.formula) {
-          sheet.getCell(op.cell).value = { formula: op.formula } as any;
+          const cleanFormula = op.formula.startsWith('=') ? op.formula.slice(1) : op.formula;
+          sheet.getCell(op.cell).value = { formula: cleanFormula, result: undefined } as any;
         }
         break;
       }
@@ -905,7 +1280,7 @@ export function clearAgentDocuments(userId: string, agentId: string): number {
   const path = require('path');
   const fs = require('fs');
 
-  const dir = path.join(DATA_DIR, 'agents', userId, agentId, 'documents');
+  const dir = path.join(resolveAgentsDataRoot(), userId, agentId, 'documents');
   try {
     if (!fs.existsSync(dir)) return 0;
     const files: string[] = fs.readdirSync(dir);
