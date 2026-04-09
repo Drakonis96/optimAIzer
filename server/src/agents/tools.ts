@@ -27,6 +27,7 @@ import {
 } from '../security/terminalSecurity';
 import * as skills from './skills';
 import * as eventSubs from './eventSubscriptions';
+import * as documentTools from './documentTools';
 import { scoreAndFilterMemories, MemoryCandidate } from './smartMemory';
 
 // ---------------------------------------------------------------------------
@@ -1035,6 +1036,93 @@ export const AGENT_TOOLS: ToolDefinition[] = [
       language: { type: 'string', description: 'Lenguaje de programación: "python", "node", "bash", "sh", "powershell" (por defecto: "python")', required: false },
       reason: { type: 'string', description: 'Explicación clara de por qué necesitas ejecutar este código y qué resultado esperas', required: true },
       timeout_ms: { type: 'number', description: 'Timeout en milisegundos (opcional, por defecto 60000)', required: false },
+    },
+  },
+
+  // ── Document Tools ─────────────────────────────────────────────────────
+
+  {
+    name: 'read_word',
+    description:
+      'Lee un archivo Word (.docx) y extrae su contenido de texto, estilos y metadatos. Útil para analizar, resumir o procesar documentos Word que el usuario envíe.',
+    parameters: {
+      file_path: { type: 'string', description: 'Ruta al archivo .docx a leer', required: true },
+    },
+  },
+  {
+    name: 'create_word',
+    description:
+      'Crea un documento Word (.docx) con contenido estructurado: encabezados, párrafos, listas con viñetas, tablas, negritas, cursivas y estilos. Devuelve la ruta del archivo generado para enviarlo al usuario.',
+    parameters: {
+      file_name: { type: 'string', description: 'Nombre del archivo de salida (ej: "informe.docx")', required: true },
+      content: { type: 'string', description: 'JSON array de bloques de contenido. Cada bloque: {"type":"heading"|"paragraph"|"bullet"|"table", "text":"...", "level":1-6, "bold":true/false, "italic":true/false, "style":"...", "rows":[["c1","c2"],["c3","c4"]]}', required: true },
+    },
+  },
+  {
+    name: 'read_pdf',
+    description:
+      'Lee un archivo PDF y extrae su texto, número de páginas y metadatos (título, autor, asunto). Útil para analizar, resumir o procesar documentos PDF.',
+    parameters: {
+      file_path: { type: 'string', description: 'Ruta al archivo PDF a leer', required: true },
+    },
+  },
+  {
+    name: 'create_pdf',
+    description:
+      'Crea un documento PDF con texto, encabezados, comentarios/anotaciones, imágenes y saltos de página. Devuelve la ruta del archivo generado.',
+    parameters: {
+      file_name: { type: 'string', description: 'Nombre del archivo de salida (ej: "informe.pdf")', required: true },
+      content: { type: 'string', description: 'JSON array de bloques. Cada bloque: {"type":"heading"|"text"|"comment"|"page_break"|"image", "text":"...", "fontSize":12, "bold":true/false, "imageBase64":"...", "width":200, "height":150}', required: true },
+    },
+  },
+  {
+    name: 'annotate_pdf',
+    description:
+      'Añade anotaciones, comentarios y marcas a un PDF existente. Permite añadir texto en posiciones específicas de páginas concretas con colores personalizados. Devuelve un nuevo PDF con las anotaciones.',
+    parameters: {
+      source_file_path: { type: 'string', description: 'Ruta al archivo PDF original', required: true },
+      output_file_name: { type: 'string', description: 'Nombre del archivo PDF de salida', required: true },
+      annotations: { type: 'string', description: 'JSON array de anotaciones. Cada una: {"page":1, "x":50, "y":700, "text":"Comentario", "fontSize":10, "color":"red"|"blue"|"green"|"orange"|"black"}', required: true },
+    },
+  },
+  {
+    name: 'create_powerpoint',
+    description:
+      'Crea una presentación PowerPoint (.pptx) con diapositivas que incluyen: títulos, subtítulos, contenido de texto, viñetas, notas del presentador, imágenes, diseño a dos columnas, colores de fondo y fuente. PUEDE buscar imágenes en internet con web_search y pegarlas en las diapositivas usando imageBase64.',
+    parameters: {
+      file_name: { type: 'string', description: 'Nombre del archivo (ej: "presentacion.pptx")', required: true },
+      slides: { type: 'string', description: 'JSON array de slides. Cada slide: {"title":"...", "subtitle":"...", "content":"...", "notes":"Notas del presentador", "layout":"title"|"content"|"section"|"blank"|"two_column", "bulletPoints":["..."], "leftColumn":"...", "rightColumn":"...", "backgroundColor":"#FFFFFF", "fontColor":"363636", "images":[{"base64":"...", "x":1, "y":1.5, "w":4, "h":3, "caption":"..."}]}', required: true },
+      title: { type: 'string', description: 'Título de la presentación (metadato)', required: false },
+      author: { type: 'string', description: 'Autor de la presentación (metadato)', required: false },
+      subject: { type: 'string', description: 'Asunto de la presentación (metadato)', required: false },
+    },
+  },
+  {
+    name: 'read_excel',
+    description:
+      'Lee un archivo Excel (.xlsx) y extrae las hojas con sus nombres, encabezados, datos, número de filas y columnas. Útil para analizar, procesar o transformar datos de hojas de cálculo.',
+    parameters: {
+      file_path: { type: 'string', description: 'Ruta al archivo .xlsx a leer', required: true },
+    },
+  },
+  {
+    name: 'create_excel',
+    description:
+      'Crea un archivo Excel (.xlsx) con múltiples hojas, encabezados formateados, datos, fórmulas, anchos de columna personalizados y autofiltro. Devuelve la ruta del archivo generado.',
+    parameters: {
+      file_name: { type: 'string', description: 'Nombre del archivo (ej: "datos.xlsx")', required: true },
+      sheets: { type: 'string', description: 'JSON array de hojas. Cada hoja: {"name":"Hoja1", "headers":["Col1","Col2"], "rows":[["val1","val2"]], "columnWidths":[15,20], "headerStyle":{"bold":true,"backgroundColor":"4472C4","fontColor":"FFFFFF"}, "formulas":[{"cell":"C2","formula":"SUM(A2:B2)"}]}', required: true },
+      author: { type: 'string', description: 'Autor del archivo (metadato)', required: false },
+    },
+  },
+  {
+    name: 'edit_excel',
+    description:
+      'Edita un archivo Excel (.xlsx) existente: modificar celdas, añadir/eliminar filas, aplicar fórmulas, añadir/renombrar hojas. Devuelve un nuevo archivo con los cambios.',
+    parameters: {
+      source_file_path: { type: 'string', description: 'Ruta al archivo Excel original', required: true },
+      output_file_name: { type: 'string', description: 'Nombre del archivo de salida', required: true },
+      operations: { type: 'string', description: 'JSON array de operaciones. Cada una: {"sheet":"Hoja1"|0, "type":"set_cell"|"add_row"|"delete_row"|"set_formula"|"add_sheet"|"rename_sheet", "cell":"A1", "value":"...", "row":["v1","v2"], "rowIndex":5, "formula":"SUM(A1:A10)", "sheetName":"Nueva", "newName":"Renombrada"}', required: true },
     },
   },
 ];
@@ -5437,6 +5525,156 @@ export async function executeTool(
           updateAuditEntryResult(codeAudit.id, codeExecResult, Date.now() - codeExecStartTime);
           recordResourceEvent('agent_code_execution', { language, success: false });
           return { name, success: false, result: stdout || '', error: `Error ejecutando código (${language}): ${execError.message}${stderr ? `\nStderr: ${stderr}` : ''}` };
+        }
+      }
+
+      // ── Document Tools ────────────────────────────────────────────────
+
+      case 'read_word': {
+        const filePath = params.file_path;
+        if (!filePath) return { name, success: false, result: '', error: 'Falta el parámetro "file_path"' };
+        try {
+          const result = await documentTools.readWord(filePath);
+          const stylesInfo = result.styles.length > 0 ? `\nEstilos encontrados: ${result.styles.join(', ')}` : '';
+          const metaInfo = result.metadata.warnings ? `\nAdvertencias: ${result.metadata.warnings}` : '';
+          const textPreview = result.text.length > 5000 ? result.text.slice(0, 5000) + '\n... (texto truncado)' : result.text;
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `📄 Documento Word leído correctamente.${stylesInfo}${metaInfo}\n\nContenido:\n${textPreview}` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error leyendo Word: ${err.message}` };
+        }
+      }
+
+      case 'create_word': {
+        const fileName = params.file_name;
+        if (!fileName) return { name, success: false, result: '', error: 'Falta el parámetro "file_name"' };
+        if (!params.content) return { name, success: false, result: '', error: 'Falta el parámetro "content"' };
+        try {
+          const content = typeof params.content === 'string' ? JSON.parse(params.content) : params.content;
+          const result = await documentTools.createWord({ userId, agentId, fileName, content });
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `✅ Documento Word creado: ${result.filePath} (${(result.size / 1024).toFixed(1)} KB)` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error creando Word: ${err.message}` };
+        }
+      }
+
+      case 'read_pdf': {
+        const filePath = params.file_path;
+        if (!filePath) return { name, success: false, result: '', error: 'Falta el parámetro "file_path"' };
+        try {
+          const result = await documentTools.readPdf(filePath);
+          const meta = Object.entries(result.metadata).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(', ');
+          const textPreview = result.text.length > 5000 ? result.text.slice(0, 5000) + '\n... (texto truncado)' : result.text;
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `📄 PDF leído: ${result.pageCount} páginas.${meta ? `\nMetadatos: ${meta}` : ''}\n\nContenido:\n${textPreview}` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error leyendo PDF: ${err.message}` };
+        }
+      }
+
+      case 'create_pdf': {
+        const fileName = params.file_name;
+        if (!fileName) return { name, success: false, result: '', error: 'Falta el parámetro "file_name"' };
+        if (!params.content) return { name, success: false, result: '', error: 'Falta el parámetro "content"' };
+        try {
+          const content = typeof params.content === 'string' ? JSON.parse(params.content) : params.content;
+          const result = await documentTools.createPdf({ userId, agentId, fileName, content });
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `✅ PDF creado: ${result.filePath} (${(result.size / 1024).toFixed(1)} KB)` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error creando PDF: ${err.message}` };
+        }
+      }
+
+      case 'annotate_pdf': {
+        const sourceFilePath = params.source_file_path;
+        const outputFileName = params.output_file_name;
+        if (!sourceFilePath) return { name, success: false, result: '', error: 'Falta el parámetro "source_file_path"' };
+        if (!outputFileName) return { name, success: false, result: '', error: 'Falta el parámetro "output_file_name"' };
+        if (!params.annotations) return { name, success: false, result: '', error: 'Falta el parámetro "annotations"' };
+        try {
+          const annotations = typeof params.annotations === 'string' ? JSON.parse(params.annotations) : params.annotations;
+          const result = await documentTools.annotatePdf({ userId, agentId, sourceFilePath, outputFileName, annotations });
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `✅ PDF anotado: ${result.filePath} (${(result.size / 1024).toFixed(1)} KB) — ${annotations.length} anotaciones añadidas` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error anotando PDF: ${err.message}` };
+        }
+      }
+
+      case 'create_powerpoint': {
+        const fileName = params.file_name;
+        if (!fileName) return { name, success: false, result: '', error: 'Falta el parámetro "file_name"' };
+        if (!params.slides) return { name, success: false, result: '', error: 'Falta el parámetro "slides"' };
+        try {
+          const slides = typeof params.slides === 'string' ? JSON.parse(params.slides) : params.slides;
+          const result = await documentTools.createPowerPoint({
+            userId,
+            agentId,
+            fileName,
+            slides,
+            title: typeof params.title === 'string' ? params.title : undefined,
+            author: typeof params.author === 'string' ? params.author : undefined,
+            subject: typeof params.subject === 'string' ? params.subject : undefined,
+          });
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `✅ PowerPoint creado: ${result.filePath} (${(result.size / 1024).toFixed(1)} KB) — ${slides.length} diapositivas` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error creando PowerPoint: ${err.message}` };
+        }
+      }
+
+      case 'read_excel': {
+        const filePath = params.file_path;
+        if (!filePath) return { name, success: false, result: '', error: 'Falta el parámetro "file_path"' };
+        try {
+          const result = await documentTools.readExcel(filePath);
+          const summary = result.sheets.map((s) => {
+            const headerLine = s.headers.length > 0 ? `Encabezados: ${s.headers.join(' | ')}` : '';
+            const preview = s.data.slice(0, 10).map((r) => r.join(' | ')).join('\n');
+            return `📊 Hoja "${s.name}" (${s.rowCount} filas × ${s.columnCount} cols)\n${headerLine}\n${preview}${s.data.length > 10 ? '\n... (mostrando 10 de ' + s.data.length + ' filas)' : ''}`;
+          }).join('\n\n');
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `Excel leído: ${result.sheets.length} hoja(s).\n\n${summary}` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error leyendo Excel: ${err.message}` };
+        }
+      }
+
+      case 'create_excel': {
+        const fileName = params.file_name;
+        if (!fileName) return { name, success: false, result: '', error: 'Falta el parámetro "file_name"' };
+        if (!params.sheets) return { name, success: false, result: '', error: 'Falta el parámetro "sheets"' };
+        try {
+          const sheets = typeof params.sheets === 'string' ? JSON.parse(params.sheets) : params.sheets;
+          const result = await documentTools.createExcel({
+            userId,
+            agentId,
+            fileName,
+            sheets,
+            author: typeof params.author === 'string' ? params.author : undefined,
+          });
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `✅ Excel creado: ${result.filePath} (${(result.size / 1024).toFixed(1)} KB) — ${sheets.length} hoja(s)` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error creando Excel: ${err.message}` };
+        }
+      }
+
+      case 'edit_excel': {
+        const sourceFilePath = params.source_file_path;
+        const outputFileName = params.output_file_name;
+        if (!sourceFilePath) return { name, success: false, result: '', error: 'Falta el parámetro "source_file_path"' };
+        if (!outputFileName) return { name, success: false, result: '', error: 'Falta el parámetro "output_file_name"' };
+        if (!params.operations) return { name, success: false, result: '', error: 'Falta el parámetro "operations"' };
+        try {
+          const operations = typeof params.operations === 'string' ? JSON.parse(params.operations) : params.operations;
+          const result = await documentTools.editExcel({ userId, agentId, sourceFilePath, outputFileName, operations });
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return { name, success: true, result: `✅ Excel editado: ${result.filePath} (${(result.size / 1024).toFixed(1)} KB) — ${operations.length} operación(es) aplicada(s)` };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error editando Excel: ${err.message}` };
         }
       }
 

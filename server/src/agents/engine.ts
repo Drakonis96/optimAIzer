@@ -201,6 +201,10 @@ export const PARALLEL_SAFE_TOOLS = new Set([
   'list_skills',
   'get_skill',
   'list_event_subscriptions',
+  // Document tools (read-only)
+  'read_word',
+  'read_pdf',
+  'read_excel',
 ]);
 
 /**

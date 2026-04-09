@@ -10,10 +10,17 @@
   "dependencies": {
     "better-sqlite3": "^11.7.0",
     "cors": "^2.8.5",
+    "docx": "^9.6.1",
     "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
     "express": "^4.21.2",
-    "helmet": "^8.0.0",
     "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "mammoth": "^1.12.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.296",
+    "pptxgenjs": "^4.0.1",
+    "sharp": "^0.34.5",
     "ws": "^8.18.0"
   },
   "devDependencies": {
