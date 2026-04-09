@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { createProvider } from '../providers';
 import { ChatRequest, ConciliumMode, ConciliumRequest, Provider } from '../types';
 import { hasApiKey } from '../config';
-import { getEnabledToolingForProvider } from '../providers/base';
+import { getEnabledToolingForProvider, NativeFunctionTool, NativeToolCall } from '../providers/base';
 import { buildStreamCacheKey, streamResponseCache, StreamCacheRoute } from '../cache/responseCache';
 import { cancelStream, registerStream, unregisterStream } from '../streaming/streamRegistry';
 import { safeErrorMessage } from '../security/redact';
@@ -10,6 +10,8 @@ import { isModelAllowedForUser } from '../auth/users';
 import { estimateInputTokens, estimateTextTokens } from '../auth/costs';
 import { assertWithinUserMonthlyBudget, recordUserUsageEvent } from '../auth/usage';
 import { AuthUser } from '../auth/types';
+import * as documentTools from '../agents/documentTools';
+import { analyzeImage } from '../agents/vision';
 import { getBuiltinSkills } from '../agents/skills/registry';
 import { buildChatSkillsPrompt, buildSkillsPromptFromList } from '../agents/skills/registry';
 import { Skill } from '../agents/skills';
@@ -291,6 +293,172 @@ chatRouter.post('/cancel', (req: Request, res: Response) => {
   res.json({ success: true, cancelled });
 });
 
+// ---------------------------------------------------------------------------
+// Chat Document Tools — Allow the main chat to create/edit documents
+// ---------------------------------------------------------------------------
+
+const CHAT_AGENT_ID = '_chat_';
+const USER_AGENT_HEADER = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const CHAT_TOOL_MAX_ITERATIONS = 6;
+
+const CHAT_DOCUMENT_TOOL_DEFS: NativeFunctionTool[] = [
+  {
+    name: 'create_word',
+    description: 'Crea un documento Word (.docx) con contenido estructurado. Devuelve un enlace de descarga. NUNCA generes código; usa SIEMPRE esta herramienta.',
+    parameters: {
+      type: 'object',
+      properties: {
+        file_name: { type: 'string', description: 'Nombre del archivo (ej: "informe.docx")' },
+        content: { type: 'string', description: 'JSON array de bloques: [{"type":"heading"|"paragraph"|"bullet"|"table", "text":"...", "level":1-6, "bold":true/false, "italic":true/false, "rows":[["c1","c2"]]}]' },
+      },
+      required: ['file_name', 'content'],
+    },
+  },
+  {
+    name: 'create_pdf',
+    description: 'Crea un documento PDF. Devuelve un enlace de descarga. NUNCA generes código; usa SIEMPRE esta herramienta.',
+    parameters: {
+      type: 'object',
+      properties: {
+        file_name: { type: 'string', description: 'Nombre del archivo (ej: "informe.pdf")' },
+        content: { type: 'string', description: 'JSON array de bloques: [{"type":"heading"|"text"|"comment"|"page_break"|"image", "text":"...", "fontSize":12, "bold":true/false, "imageBase64":"..."}]' },
+      },
+      required: ['file_name', 'content'],
+    },
+  },
+  {
+    name: 'create_powerpoint',
+    description: 'Crea una presentación PowerPoint (.pptx). Devuelve un enlace de descarga. Usa fetch_image para incluir imágenes de internet. NUNCA generes código.',
+    parameters: {
+      type: 'object',
+      properties: {
+        file_name: { type: 'string', description: 'Nombre del archivo (ej: "presentacion.pptx")' },
+        slides: { type: 'string', description: 'JSON array de slides: [{"title":"...", "subtitle":"...", "content":"...", "layout":"title"|"content"|"section"|"blank"|"two_column", "bulletPoints":["..."], "images":[{"base64":"data:...","x":1,"y":1.5,"w":4,"h":3,"caption":"..."}]}]' },
+        title: { type: 'string', description: 'Título de la presentación (metadato, opcional)' },
+      },
+      required: ['file_name', 'slides'],
+    },
+  },
+  {
+    name: 'create_excel',
+    description: 'Crea un archivo Excel (.xlsx). Devuelve un enlace de descarga. NUNCA generes código.',
+    parameters: {
+      type: 'object',
+      properties: {
+        file_name: { type: 'string', description: 'Nombre del archivo (ej: "datos.xlsx")' },
+        sheets: { type: 'string', description: 'JSON array de hojas: [{"name":"Hoja1","headers":["Col1","Col2"],"rows":[["v1","v2"]],"columnWidths":[15,20]}]' },
+      },
+      required: ['file_name', 'sheets'],
+    },
+  },
+  {
+    name: 'fetch_image',
+    description: 'Descarga una imagen desde una URL, la analiza con IA y la devuelve en base64. Imprescindible para insertar imágenes de internet en presentaciones/documentos.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL directa de la imagen (jpg, png, gif, webp)' },
+      },
+      required: ['url'],
+    },
+  },
+];
+
+const DOCUMENT_KEYWORDS_RE = /\b(crea|crear|genera|generar|haz|hazme|hacer|escrib[eai]|redact[ae]|prepara|diseñ[ae]|make|create|generate|write|build|prepare|design)\b.*\b(document[oe]?s?|word|\.docx|pdf|\.pdf|powerpoint|pptx|\.pptx|presentaci[oó]n|excel|\.xlsx|hoja\s+de\s+c[aá]lculo|spreadsheet|diapositiva|slide)\b/i;
+
+function chatNeedsDocumentTools(messages: Array<{ role: string; content: string }>): boolean {
+  // Check the last 3 user messages
+  const recentUserMsgs = messages.filter(m => m.role === 'user').slice(-3);
+  return recentUserMsgs.some(m => DOCUMENT_KEYWORDS_RE.test(m.content));
+}
+
+async function executeChatDocumentTool(
+  toolCall: NativeToolCall,
+  userId: string,
+  provider: Provider,
+  model: string,
+): Promise<string> {
+  const { name, arguments: params } = toolCall;
+  const path = require('path');
+
+  switch (name) {
+    case 'create_word': {
+      const fileName = params.file_name as string;
+      if (!fileName || !params.content) return 'Error: faltan parámetros file_name o content';
+      const content = typeof params.content === 'string' ? JSON.parse(params.content) : params.content;
+      const result = await documentTools.createWord({ userId, agentId: CHAT_AGENT_ID, fileName, content });
+      const safeName = path.basename(fileName);
+      const downloadUrl = `/api/agents/${encodeURIComponent(CHAT_AGENT_ID)}/documents/${encodeURIComponent(safeName)}`;
+      return `✅ Documento Word creado (${(result.size / 1024).toFixed(1)} KB).\n\n📥 [Descargar ${safeName}](${downloadUrl})`;
+    }
+    case 'create_pdf': {
+      const fileName = params.file_name as string;
+      if (!fileName || !params.content) return 'Error: faltan parámetros file_name o content';
+      const content = typeof params.content === 'string' ? JSON.parse(params.content) : params.content;
+      const result = await documentTools.createPdf({ userId, agentId: CHAT_AGENT_ID, fileName, content });
+      const safeName = path.basename(fileName);
+      const downloadUrl = `/api/agents/${encodeURIComponent(CHAT_AGENT_ID)}/documents/${encodeURIComponent(safeName)}`;
+      return `✅ PDF creado (${(result.size / 1024).toFixed(1)} KB).\n\n📥 [Descargar ${safeName}](${downloadUrl})`;
+    }
+    case 'create_powerpoint': {
+      const fileName = params.file_name as string;
+      if (!fileName || !params.slides) return 'Error: faltan parámetros file_name o slides';
+      const slides = typeof params.slides === 'string' ? JSON.parse(params.slides) : params.slides;
+      const result = await documentTools.createPowerPoint({
+        userId,
+        agentId: CHAT_AGENT_ID,
+        fileName,
+        slides,
+        title: typeof params.title === 'string' ? params.title : undefined,
+      });
+      const safeName = path.basename(fileName);
+      const downloadUrl = `/api/agents/${encodeURIComponent(CHAT_AGENT_ID)}/documents/${encodeURIComponent(safeName)}`;
+      return `✅ PowerPoint creado (${(result.size / 1024).toFixed(1)} KB) — ${slides.length} diapositivas.\n\n📥 [Descargar ${safeName}](${downloadUrl})`;
+    }
+    case 'create_excel': {
+      const fileName = params.file_name as string;
+      if (!fileName || !params.sheets) return 'Error: faltan parámetros file_name o sheets';
+      const sheets = typeof params.sheets === 'string' ? JSON.parse(params.sheets) : params.sheets;
+      const result = await documentTools.createExcel({ userId, agentId: CHAT_AGENT_ID, fileName, sheets });
+      const safeName = path.basename(fileName);
+      const downloadUrl = `/api/agents/${encodeURIComponent(CHAT_AGENT_ID)}/documents/${encodeURIComponent(safeName)}`;
+      return `✅ Excel creado (${(result.size / 1024).toFixed(1)} KB) — ${sheets.length} hoja(s).\n\n📥 [Descargar ${safeName}](${downloadUrl})`;
+    }
+    case 'fetch_image': {
+      const url = params.url as string;
+      if (!url) return 'Error: falta el parámetro url';
+      const imgResponse = await fetch(url, {
+        headers: { 'User-Agent': USER_AGENT_HEADER, 'Accept': 'image/*,*/*;q=0.8' },
+        signal: AbortSignal.timeout(30000),
+        redirect: 'follow',
+      });
+      if (!imgResponse.ok) return `Error HTTP ${imgResponse.status}: ${imgResponse.statusText}`;
+      const contentType = imgResponse.headers.get('content-type') || '';
+      if (!contentType.startsWith('image/')) return `La URL no devuelve una imagen (${contentType})`;
+      const buffer = Buffer.from(await imgResponse.arrayBuffer());
+      if (buffer.length > 10 * 1024 * 1024) return `Imagen demasiado grande (${(buffer.length / 1024 / 1024).toFixed(1)} MB)`;
+      const mimeType = contentType.split(';')[0].trim();
+      const dataUri = `data:${mimeType};base64,${buffer.toString('base64')}`;
+
+      let imageDescription = '';
+      try {
+        const visionResult = await analyzeImage(
+          buffer, mimeType,
+          'Describe brevemente qué muestra esta imagen (contenido, estilo, calidad). ¿Es adecuada para una presentación profesional?',
+          provider, model,
+        );
+        imageDescription = visionResult.description;
+      } catch { imageDescription = '(No se pudo analizar la imagen)'; }
+
+      return `Imagen descargada (${(buffer.length / 1024).toFixed(1)} KB, ${mimeType}).\n\n**Análisis:** ${imageDescription}\n\nbase64:\n${dataUri}`;
+    }
+    default:
+      return `Herramienta no disponible: ${name}`;
+  }
+}
+
+const CHAT_DOC_SYSTEM_SUFFIX = `\n\nTienes acceso a herramientas para crear documentos (Word, PDF, PowerPoint, Excel) y descargar/analizar imágenes. Cuando el usuario pida crear un documento, usa SIEMPRE las herramientas disponibles. NUNCA generes código o scripts para crear documentos. Incluye siempre en tu respuesta el enlace de descarga que devuelve la herramienta.`;
+
 /**
  * POST /api/chat
  * Standard chat completion with SSE streaming.
@@ -363,6 +531,105 @@ chatRouter.post('/', async (req: Request, res: Response) => {
   const { requestId: streamRequestId, controller } = registerStream(requestId);
   const onClientClose = () => controller.abort();
   res.on('close', onClientClose);
+
+  // -----------------------------------------------------------------------
+  // Document-tools path: use chatWithTools loop instead of streaming
+  // -----------------------------------------------------------------------
+  const providerAdapter = createProvider(provider);
+  const useDocumentTools = chatNeedsDocumentTools(messages) && typeof providerAdapter.chatWithTools === 'function';
+
+  if (useDocumentTools) {
+    const docSystemPrompt = (effectiveSystemPrompt || '') + CHAT_DOC_SYSTEM_SUFFIX;
+
+    try {
+      setupSse(res);
+      writeSse(res, { type: 'meta', requestId: streamRequestId });
+
+      const userId = authUser.id;
+      let loopMessages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [...messages];
+      let finalContent = '';
+
+      for (let iteration = 0; iteration < CHAT_TOOL_MAX_ITERATIONS; iteration++) {
+        if (controller.signal.aborted) break;
+
+        const toolResult = await providerAdapter.chatWithTools!({
+          model,
+          messages: loopMessages,
+          systemPrompt: docSystemPrompt,
+          tools: CHAT_DOCUMENT_TOOL_DEFS,
+          maxTokens,
+          temperature,
+        });
+
+        if (toolResult.toolCalls.length === 0) {
+          finalContent = toolResult.content;
+          break;
+        }
+
+        // Execute tool calls and build result messages
+        const toolResultMessages: string[] = [];
+        for (const tc of toolResult.toolCalls) {
+          try {
+            const result = await executeChatDocumentTool(tc, userId, provider, model);
+            toolResultMessages.push(`[Tool: ${tc.name}] ${result}`);
+          } catch (err: any) {
+            toolResultMessages.push(`[Tool: ${tc.name}] Error: ${err.message}`);
+          }
+        }
+
+        // Add assistant response + tool results to conversation
+        if (toolResult.content) {
+          loopMessages.push({ role: 'assistant', content: toolResult.content });
+        }
+        loopMessages.push({
+          role: 'user',
+          content: toolResultMessages.join('\n\n'),
+        });
+
+        // On last iteration, set whatever we have
+        if (iteration === CHAT_TOOL_MAX_ITERATIONS - 1) {
+          finalContent = toolResult.content || toolResultMessages.join('\n\n');
+        }
+      }
+
+      // Emit the final content as chunked tokens
+      if (finalContent) {
+        const chunkSize = 80;
+        for (let i = 0; i < finalContent.length; i += chunkSize) {
+          writeSse(res, { type: 'token', content: finalContent.slice(i, i + chunkSize) });
+        }
+      }
+
+      recordUserUsageEvent({
+        userId: authUser.id,
+        provider,
+        model,
+        inputTokens,
+        outputTokens: estimateTextTokens(finalContent),
+        source: 'chat',
+        tooling: effectiveTooling,
+      });
+
+      writeSse(res, controller.signal.aborted ? { type: 'cancelled' } : { type: 'done' });
+    } catch (error: unknown) {
+      if (controller.signal.aborted || isAbortError(error)) {
+        writeSse(res, { type: 'cancelled' });
+      } else {
+        const message = normalizeError(error);
+        console.error('[Chat] Document tools error:', message);
+        writeSse(res, { type: 'error', error: message });
+      }
+    } finally {
+      res.off('close', onClientClose);
+      unregisterStream(streamRequestId);
+      endSse(res);
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Standard streaming path (no document tools)
+  // -----------------------------------------------------------------------
 
   try {
     setupSse(res);

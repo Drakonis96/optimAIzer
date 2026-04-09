@@ -78,6 +78,14 @@ export const AGENT_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'fetch_image',
+    description:
+      'Descarga una imagen desde una URL y la devuelve en formato base64. Además, ANALIZA automáticamente el contenido de la imagen y te dice qué muestra, para que puedas decidir si es relevante para tu presentación/documento. IMPRESCINDIBLE para insertar imágenes de internet en documentos. Flujo: 1) web_search para encontrar imágenes, 2) fetch_image para descargar+analizar, 3) usar el base64 en create_powerpoint/create_pdf.',
+    parameters: {
+      url: { type: 'string', description: 'La URL directa de la imagen (jpg, png, gif, webp)', required: true },
+    },
+  },
+  {
     name: 'browse_website',
     description:
       'Navega a una URL usando un navegador headless (para páginas que requieren JavaScript). Útil para aplicaciones web interactivas, dashboards, páginas con contenido dinámico, logins en sitios web como Google Home, etc.',
@@ -2716,6 +2724,67 @@ export async function executeTool(
         }
         const result = await executeFetchWebpage(url);
         return { name, success: true, result };
+      }
+
+      case 'fetch_image': {
+        const url = params.url;
+        if (!url) return { name, success: false, result: '', error: 'Falta el parámetro "url"' };
+        if (!context.agentConfig.permissions.internetAccess) {
+          return { name, success: false, result: '', error: 'El agente no tiene permiso de acceso a internet' };
+        }
+        const imgUrlBlockReason = checkUrlAllowed(url, context.agentConfig.permissions);
+        if (imgUrlBlockReason) {
+          return { name, success: false, result: '', error: imgUrlBlockReason };
+        }
+        try {
+          const imgResponse = await fetch(url, {
+            headers: {
+              'User-Agent': USER_AGENT,
+              'Accept': 'image/*,*/*;q=0.8',
+            },
+            signal: AbortSignal.timeout(30000),
+            redirect: 'follow',
+          });
+          if (!imgResponse.ok) {
+            return { name, success: false, result: '', error: `HTTP ${imgResponse.status}: ${imgResponse.statusText}` };
+          }
+          const contentType = imgResponse.headers.get('content-type') || '';
+          if (!contentType.startsWith('image/')) {
+            return { name, success: false, result: '', error: `La URL no devuelve una imagen (content-type: ${contentType})` };
+          }
+          const buffer = Buffer.from(await imgResponse.arrayBuffer());
+          const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+          if (buffer.length > MAX_IMAGE_SIZE) {
+            return { name, success: false, result: '', error: `Imagen demasiado grande (${(buffer.length / 1024 / 1024).toFixed(1)} MB, máx: 10 MB)` };
+          }
+          const base64 = buffer.toString('base64');
+          const mimeType = contentType.split(';')[0].trim();
+          const dataUri = `data:${mimeType};base64,${base64}`;
+
+          // Analyze image content with vision to help the agent decide if it's useful
+          let imageDescription = '';
+          try {
+            const visionResult = await analyzeImage(
+              buffer,
+              mimeType,
+              'Describe brevemente qué muestra esta imagen (contenido, estilo, calidad). ¿Es adecuada para una presentación profesional?',
+              context.agentConfig.provider as any,
+              context.agentConfig.model,
+            );
+            imageDescription = visionResult.description;
+          } catch {
+            imageDescription = '(No se pudo analizar el contenido de la imagen)';
+          }
+
+          recordResourceEvent('agent_tool_call', { tool: name, success: true });
+          return {
+            name,
+            success: true,
+            result: `Imagen descargada (${(buffer.length / 1024).toFixed(1)} KB, ${mimeType}).\n\n**Análisis de la imagen:** ${imageDescription}\n\nbase64 (usar directamente en images[].base64 de create_powerpoint o imageBase64 de create_pdf):\n${dataUri}`,
+          };
+        } catch (err: any) {
+          return { name, success: false, result: '', error: `Error descargando imagen: ${err.message}` };
+        }
       }
 
       case 'browse_website': {
