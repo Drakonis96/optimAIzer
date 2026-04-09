@@ -1,9 +1,10 @@
 import { BaseProvider, ChatParams, ChatWithToolsParams, ChatWithToolsResult, NativeToolCall, buildMessagesWithSystem } from './base';
-import { StreamChunk } from '../types';
+import { ChatMessage, StreamChunk } from '../types';
 import { getOpenRouterApiKeyError, normalizeOpenRouterApiKey } from './openrouterAuth';
 
 /**
  * OpenRouter uses an OpenAI-compatible API with its own base URL.
+ * Supports prompt caching for Anthropic models via cache_control passthrough.
  */
 export class OpenRouterProvider implements BaseProvider {
   readonly name = 'OpenRouter';
@@ -62,6 +63,51 @@ export class OpenRouterProvider implements BaseProvider {
     );
   }
 
+  /**
+   * Returns true if the model is Anthropic-based and supports cache_control.
+   */
+  private isAnthropicModel(model: string): boolean {
+    const lowered = model.toLowerCase();
+    return lowered.startsWith('anthropic/') || lowered.includes('claude');
+  }
+
+  /**
+   * Determine whether prompt caching should be enabled for the current request.
+   * Only activates for Anthropic models with enough prefix content.
+   */
+  private shouldEnablePromptCaching(model: string, messages: ChatMessage[]): boolean {
+    if (!this.isAnthropicModel(model)) return false;
+    if (messages.length <= 1) return false;
+    const prefixChars = messages
+      .slice(0, Math.max(0, messages.length - 1))
+      .reduce((total, msg) => total + msg.content.length, 0);
+    return prefixChars >= 100;
+  }
+
+  /**
+   * Apply cache_control to messages for Anthropic models routed through OpenRouter.
+   * Marks the system prompt and all non-final messages as cacheable.
+   */
+  private applyCacheControl(messages: ChatMessage[]): Array<Record<string, unknown>> {
+    const lastIndex = messages.length - 1;
+    return messages.map((msg, index) => {
+      const shouldCache = index < lastIndex || msg.role === 'system';
+      if (shouldCache) {
+        return {
+          role: msg.role,
+          content: [
+            {
+              type: 'text',
+              text: msg.content,
+              cache_control: { type: 'ephemeral' },
+            },
+          ],
+        };
+      }
+      return { role: msg.role, content: msg.content };
+    });
+  }
+
   private parseToolCallArguments(raw: unknown): Record<string, unknown> {
     if (typeof raw !== 'string') {
       return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
@@ -102,7 +148,9 @@ export class OpenRouterProvider implements BaseProvider {
 
   async chat(params: ChatParams): Promise<string> {
     const apiKey = this.resolveApiKey();
-    const messages = buildMessagesWithSystem(params.messages, params.systemPrompt);
+    const rawMessages = buildMessagesWithSystem(params.messages, params.systemPrompt);
+    const useCache = this.shouldEnablePromptCaching(params.model, rawMessages);
+    const messages = useCache ? this.applyCacheControl(rawMessages) : rawMessages;
     const maxTokens = this.resolveMaxTokens(params.maxTokens);
     const body: Record<string, unknown> = {
       model: params.model,
@@ -153,7 +201,9 @@ export class OpenRouterProvider implements BaseProvider {
 
   async chatWithTools(params: ChatWithToolsParams): Promise<ChatWithToolsResult> {
     const apiKey = this.resolveApiKey();
-    const messages = buildMessagesWithSystem(params.messages, params.systemPrompt);
+    const rawMessages = buildMessagesWithSystem(params.messages, params.systemPrompt);
+    const useCache = this.shouldEnablePromptCaching(params.model, rawMessages);
+    const messages = useCache ? this.applyCacheControl(rawMessages) : rawMessages;
     const maxTokens = this.resolveMaxTokens(params.maxTokens);
     const body: Record<string, unknown> = {
       model: params.model,
@@ -203,7 +253,9 @@ export class OpenRouterProvider implements BaseProvider {
       return;
     }
 
-    const messages = buildMessagesWithSystem(params.messages, params.systemPrompt);
+    const rawMessages = buildMessagesWithSystem(params.messages, params.systemPrompt);
+    const useCache = this.shouldEnablePromptCaching(params.model, rawMessages);
+    const messages = useCache ? this.applyCacheControl(rawMessages) : rawMessages;
     const maxTokens = this.resolveMaxTokens(params.maxTokens);
     const body: Record<string, unknown> = {
       model: params.model,
