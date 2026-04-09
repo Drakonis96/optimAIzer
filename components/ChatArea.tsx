@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Send, Bot, User as UserIcon, Paperclip, Mic, Quote as QuoteIcon, X, Copy, RefreshCw, GitBranch, Check, Database, FileText, File as FileIcon, Eye, Sparkles } from 'lucide-react';
+import { Send, Bot, User as UserIcon, Paperclip, Mic, Quote as QuoteIcon, X, Copy, RefreshCw, GitBranch, Check, Database, FileText, File as FileIcon, Eye, Sparkles, ChevronDown, ChevronRight, Search, Code } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message, MessageAttachment, Quote, Language, QuickInsertPrompt } from '../types';
@@ -321,6 +321,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [builtinSkills, setBuiltinSkills] = useState<SkillSummaryApi[]>([]);
   const [skillsLoaded, setSkillsLoaded] = useState(false);
+  const [expandedCodeBlocks, setExpandedCodeBlocks] = useState<Set<string>>(new Set());
+  const [skillsSearchQuery, setSkillsSearchQuery] = useState('');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -378,6 +380,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       }
       if (skillsMenuRef.current && !skillsMenuRef.current.contains(event.target as Node)) {
         setIsSkillsMenuOpen(false);
+        setSkillsSearchQuery('');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -752,52 +755,82 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               }
             : null;
 
+        const isExpanded = expandedCodeBlocks.has(codeBlockCopyId);
+        const lineCount = normalizedCode.split('\n').length;
+
+        const toggleExpand = () => {
+          setExpandedCodeBlocks((prev) => {
+            const next = new Set(prev);
+            if (next.has(codeBlockCopyId)) next.delete(codeBlockCopyId);
+            else next.add(codeBlockCopyId);
+            return next;
+          });
+        };
+
         return (
           <div className="relative">
-            <div className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5">
-              {previewArtifact && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPreviewTarget({
-                      sourceId,
-                      previewableIndex: previewArtifact.previewableIndex,
-                      artifact: previewArtifact,
-                    })
-                  }
-                  className={`inline-flex items-center justify-center rounded-md border p-1.5 transition-colors ${
-                    isActive
-                      ? 'border-indigo-500 bg-indigo-500 text-white'
-                      : 'border-zinc-300 dark:border-zinc-600 bg-white/90 dark:bg-zinc-900/90 text-zinc-600 dark:text-zinc-300 hover:border-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300'
-                  }`}
-                  title={`${t.chatArea.previewArtifact} (${getPreviewKindLabel(previewArtifact.kind)})`}
-                  aria-label={`${t.chatArea.previewArtifact} (${getPreviewKindLabel(previewArtifact.kind)})`}
-                >
-                  <Eye size={13} />
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => handleCopy(normalizedCode, codeBlockCopyId)}
-                className={`inline-flex items-center justify-center rounded-md border p-1.5 transition-colors ${
-                  isCodeCopied
-                    ? 'border-emerald-500 bg-emerald-500 text-white'
-                    : 'border-zinc-300 dark:border-zinc-600 bg-white/90 dark:bg-zinc-900/90 text-zinc-600 dark:text-zinc-300 hover:border-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300'
-                }`}
-                title={isCodeCopied ? (language === 'es' ? 'Copiado' : 'Copied') : (language === 'es' ? 'Copiar código' : 'Copy code')}
-                aria-label={isCodeCopied ? (language === 'es' ? 'Copiado' : 'Copied') : (language === 'es' ? 'Copiar código' : 'Copy code')}
-              >
-                {isCodeCopied ? <Check size={13} /> : <Copy size={13} />}
-              </button>
-            </div>
-            <pre
-              {...props}
-              className={`${typeof props.className === 'string' ? props.className : ''} ${
-                previewArtifact ? 'pr-24' : 'pr-12'
-              }`.trim()}
+            {/* Collapse/Expand header bar */}
+            <button
+              type="button"
+              onClick={toggleExpand}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-t-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors select-none"
             >
-              {children}
-            </pre>
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <Code size={13} />
+              <span>{language || 'code'}</span>
+              <span className="text-zinc-400 dark:text-zinc-500 ml-auto text-[10px]">{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span>
+              <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                {isExpanded ? t.chatArea.codeExpanded : t.chatArea.codeCollapsed}
+              </span>
+            </button>
+            {isExpanded && (
+              <>
+                <div className="absolute top-10 right-2 z-10 inline-flex items-center gap-1.5">
+                  {previewArtifact && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewTarget({
+                          sourceId,
+                          previewableIndex: previewArtifact.previewableIndex,
+                          artifact: previewArtifact,
+                        })
+                      }
+                      className={`inline-flex items-center justify-center rounded-md border p-1.5 transition-colors ${
+                        isActive
+                          ? 'border-indigo-500 bg-indigo-500 text-white'
+                          : 'border-zinc-300 dark:border-zinc-600 bg-white/90 dark:bg-zinc-900/90 text-zinc-600 dark:text-zinc-300 hover:border-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300'
+                      }`}
+                      title={`${t.chatArea.previewArtifact} (${getPreviewKindLabel(previewArtifact.kind)})`}
+                      aria-label={`${t.chatArea.previewArtifact} (${getPreviewKindLabel(previewArtifact.kind)})`}
+                    >
+                      <Eye size={13} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(normalizedCode, codeBlockCopyId)}
+                    className={`inline-flex items-center justify-center rounded-md border p-1.5 transition-colors ${
+                      isCodeCopied
+                        ? 'border-emerald-500 bg-emerald-500 text-white'
+                        : 'border-zinc-300 dark:border-zinc-600 bg-white/90 dark:bg-zinc-900/90 text-zinc-600 dark:text-zinc-300 hover:border-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300'
+                    }`}
+                    title={isCodeCopied ? (language === 'es' ? 'Copiado' : 'Copied') : (language === 'es' ? 'Copiar código' : 'Copy code')}
+                    aria-label={isCodeCopied ? (language === 'es' ? 'Copiado' : 'Copied') : (language === 'es' ? 'Copiar código' : 'Copy code')}
+                  >
+                    {isCodeCopied ? <Check size={13} /> : <Copy size={13} />}
+                  </button>
+                </div>
+                <pre
+                  {...props}
+                  className={`${typeof props.className === 'string' ? props.className : ''} ${
+                    previewArtifact ? 'pr-24' : 'pr-12'
+                  } !rounded-t-none !mt-0 !border-t-0`.trim()}
+                >
+                  {children}
+                </pre>
+              </>
+            )}
           </div>
         );
       },
@@ -1207,7 +1240,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder={activeQuote ? t.chatArea.writeReply : t.chatArea.askAnything}
                 rows={1}
-                className="w-full bg-transparent text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 text-sm p-4 pr-32 resize-none focus:outline-none max-h-[200px] overflow-y-auto"
+                className="w-full bg-transparent text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 text-sm p-4 pb-12 resize-none focus:outline-none max-h-[200px] overflow-y-auto"
             />
 
             {inputNotice && (
@@ -1289,55 +1322,93 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                             </button>
                           )}
                         </div>
-                        {/* Auto-detect option */}
-                        <button
-                          onClick={() => { setSelectedSkillIds([]); setIsSkillsMenuOpen(false); }}
-                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors ${
-                            selectedSkillIds.length === 0
-                              ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
-                              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                          }`}
-                        >
-                          <Sparkles size={14} />
-                          <span className="font-medium">{t.chatArea.skillsAutoDetect}</span>
-                        </button>
-                        <div className="border-t border-zinc-100 dark:border-zinc-800" />
-                        <div className="max-h-56 overflow-y-auto py-1">
-                          {builtinSkills.length === 0 && skillsLoaded && (
-                            <p className="px-3 py-2 text-xs text-zinc-400">{t.chatArea.skillsNone}</p>
-                          )}
-                          {builtinSkills.map((skill) => {
-                            const isSelected = selectedSkillIds.includes(skill.id);
-                            const displayName = language === 'en' && skill.name_en ? skill.name_en : skill.name;
-                            const displayDesc = language === 'en' && skill.description_en ? skill.description_en : skill.description;
-                            return (
-                              <button
-                                key={skill.id}
-                                onClick={() => {
-                                  setSelectedSkillIds((prev) =>
-                                    isSelected ? prev.filter((id) => id !== skill.id) : [...prev, skill.id]
-                                  );
-                                }}
-                                className={`w-full text-left px-3 py-2 transition-colors flex items-start gap-2 ${
-                                  isSelected
-                                    ? 'bg-amber-50/50 dark:bg-amber-900/10'
-                                    : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                                }`}
-                              >
-                                <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-                                  isSelected
-                                    ? 'bg-amber-500 border-amber-500 text-white'
-                                    : 'border-zinc-300 dark:border-zinc-600'
-                                }`}>
-                                  {isSelected && <Check size={10} />}
-                                </div>
-                                <div className="overflow-hidden">
-                                  <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{displayName}</p>
-                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">{displayDesc}</p>
-                                </div>
+                        {/* Search bar */}
+                        <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                            <Search size={13} className="text-zinc-400 dark:text-zinc-500 flex-shrink-0" />
+                            <input
+                              type="text"
+                              value={skillsSearchQuery}
+                              onChange={(e) => setSkillsSearchQuery(e.target.value)}
+                              placeholder={t.chatArea.skillsSearch}
+                              className="bg-transparent text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none w-full"
+                              autoFocus
+                            />
+                            {skillsSearchQuery && (
+                              <button onClick={() => setSkillsSearchQuery('')} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                                <X size={12} />
                               </button>
-                            );
-                          })}
+                            )}
+                          </div>
+                        </div>
+                        {/* Auto-detect option */}
+                        {!skillsSearchQuery && (
+                          <>
+                            <button
+                              onClick={() => { setSelectedSkillIds([]); setIsSkillsMenuOpen(false); setSkillsSearchQuery(''); }}
+                              className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors ${
+                                selectedSkillIds.length === 0
+                                  ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
+                                  : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                              }`}
+                            >
+                              <Sparkles size={14} />
+                              <span className="font-medium">{t.chatArea.skillsAutoDetect}</span>
+                            </button>
+                            <div className="border-t border-zinc-100 dark:border-zinc-800" />
+                          </>
+                        )}
+                        <div className="max-h-56 overflow-y-auto py-1">
+                          {(() => {
+                            const sortedSkills = [...builtinSkills].sort((a, b) => {
+                              const nameA = (language === 'en' && a.name_en ? a.name_en : a.name).toLowerCase();
+                              const nameB = (language === 'en' && b.name_en ? b.name_en : b.name).toLowerCase();
+                              return nameA.localeCompare(nameB);
+                            });
+                            const query = skillsSearchQuery.toLowerCase().trim();
+                            const filteredSkills = query
+                              ? sortedSkills.filter((skill) => {
+                                  const name = (language === 'en' && skill.name_en ? skill.name_en : skill.name).toLowerCase();
+                                  const desc = (language === 'en' && skill.description_en ? skill.description_en : skill.description).toLowerCase();
+                                  return name.includes(query) || desc.includes(query);
+                                })
+                              : sortedSkills;
+                            if (filteredSkills.length === 0 && skillsLoaded) {
+                              return <p className="px-3 py-2 text-xs text-zinc-400">{t.chatArea.skillsNone}</p>;
+                            }
+                            return filteredSkills.map((skill) => {
+                              const isSelected = selectedSkillIds.includes(skill.id);
+                              const displayName = language === 'en' && skill.name_en ? skill.name_en : skill.name;
+                              const displayDesc = language === 'en' && skill.description_en ? skill.description_en : skill.description;
+                              return (
+                                <button
+                                  key={skill.id}
+                                  onClick={() => {
+                                    setSelectedSkillIds((prev) =>
+                                      isSelected ? prev.filter((id) => id !== skill.id) : [...prev, skill.id]
+                                    );
+                                  }}
+                                  className={`w-full text-left px-3 py-2 transition-colors flex items-start gap-2 ${
+                                    isSelected
+                                      ? 'bg-amber-50/50 dark:bg-amber-900/10'
+                                      : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                  }`}
+                                >
+                                  <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                                    isSelected
+                                      ? 'bg-amber-500 border-amber-500 text-white'
+                                      : 'border-zinc-300 dark:border-zinc-600'
+                                  }`}>
+                                    {isSelected && <Check size={10} />}
+                                  </div>
+                                  <div className="overflow-hidden">
+                                    <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{displayName}</p>
+                                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">{displayDesc}</p>
+                                  </div>
+                                </button>
+                              );
+                            });
+                          })()}
                         </div>
                       </div>
                     )}

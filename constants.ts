@@ -439,7 +439,10 @@ export const TRANSLATIONS = {
             skillsSelected: "{count} skill(s) selected",
             skillsClear: "Clear selection",
             skillsAutoDetect: "Auto-detect (default)",
-            skillsNone: "No skills available"
+            skillsNone: "No skills available",
+            skillsSearch: "Search skills...",
+            codeCollapsed: "Show code",
+            codeExpanded: "Hide code"
         },
         settingsModal: {
             title: "Settings",
@@ -754,7 +757,10 @@ export const TRANSLATIONS = {
             skillsSelected: "{count} skill(s) seleccionado(s)",
             skillsClear: "Limpiar selección",
             skillsAutoDetect: "Auto-detectar (por defecto)",
-            skillsNone: "No hay skills disponibles"
+            skillsNone: "No hay skills disponibles",
+            skillsSearch: "Buscar skills...",
+            codeCollapsed: "Mostrar código",
+            codeExpanded: "Ocultar código"
         },
         settingsModal: {
             title: "Ajustes",
