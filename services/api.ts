@@ -982,6 +982,13 @@ export async function sendAgentMessageApi(agentId: string, text: string): Promis
   return safeJson(res);
 }
 
+/**
+ * Build the download URL for an agent-generated document.
+ */
+export function getAgentDocumentDownloadUrl(agentId: string, fileName: string): string {
+  return `${API_BASE}/agents/${encodeURIComponent(agentId)}/documents/${encodeURIComponent(fileName)}`;
+}
+
 export async function getAgentNotesApi(agentId: string): Promise<AgentNoteApi[]> {
   const res = await apiFetch(`/agents/${encodeURIComponent(agentId)}/notes`);
   if (!res.ok) throw new Error(await getErrorMessage(res, 'Failed to fetch notes'));

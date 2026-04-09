@@ -896,3 +896,30 @@ export async function editExcel(params: {
 
   return { filePath: dest, size: stats.size };
 }
+
+// ---------------------------------------------------------------------------
+// Cleanup — Remove all generated documents for an agent
+// ---------------------------------------------------------------------------
+
+export function clearAgentDocuments(userId: string, agentId: string): number {
+  const path = require('path');
+  const fs = require('fs');
+
+  const dir = path.join(DATA_DIR, 'agents', userId, agentId, 'documents');
+  try {
+    if (!fs.existsSync(dir)) return 0;
+    const files: string[] = fs.readdirSync(dir);
+    let deleted = 0;
+    for (const file of files) {
+      try {
+        fs.unlinkSync(path.join(dir, file));
+        deleted += 1;
+      } catch { /* keep deleting the rest */ }
+    }
+    // Remove the now-empty directory
+    try { fs.rmdirSync(dir); } catch { /* ignore */ }
+    return deleted;
+  } catch {
+    return 0;
+  }
+}
