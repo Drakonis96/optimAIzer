@@ -809,7 +809,40 @@ export function deployAgent(config: AgentConfig, userId: string = 'default'): { 
         ? running.conversationHistory.slice(0, -1)
         : [...running.conversationHistory];
 
-      const { response } = await withTimeout(
+      // ── Notify about conversation compaction if needed ──────────────
+      // The engine will summarize evicted messages when history exceeds
+      // maxHistoryMessages. We show a brief notification to the user.
+      const maxHistoryMsgs = Math.max(8, Math.min(120, running.config.memoryRecentWindow || 30));
+      if (historyForEngine.length > maxHistoryMsgs) {
+        const hasExistingSummary = historyForEngine.some(
+          m => m.role === 'system' && m.content.startsWith('[CONVERSATION_SUMMARY]')
+        );
+        const evictedCount = historyForEngine.length - maxHistoryMsgs;
+        const evictedMsgs = historyForEngine.slice(0, evictedCount);
+        const lastSummary = historyForEngine.find(
+          m => m.role === 'system' && m.content.startsWith('[CONVERSATION_SUMMARY]')
+        );
+        const summaryIsStale = !hasExistingSummary ||
+          (lastSummary && evictedMsgs.filter(m => m.timestamp > lastSummary.timestamp).length >= 10);
+
+        if (summaryIsStale && evictedCount >= 4) {
+          // Infer language from agent config (same heuristic as engine)
+          const sample = `${running.config.systemPrompt || ''} ${running.config.objective || ''}`.toLowerCase();
+          const isEnglish = [' you are ', ' assistant ', ' objective ', ' tools '].some(s => sample.includes(s));
+          const compactingMsg = isEnglish
+            ? '🔄 Compacting conversation...'
+            : '🔄 Compactando conversación...';
+          // Show notification in both Telegram and web live chat
+          telegram.sendMessage(config.telegram.chatId, compactingMsg).catch(() => {});
+          running.conversationHistory.push({
+            role: 'assistant',
+            content: compactingMsg,
+            timestamp: Date.now(),
+          });
+        }
+      }
+
+      const { response, conversationSummary } = await withTimeout(
         processAgentMessage(
           running.config,
           text,
@@ -866,6 +899,21 @@ export function deployAgent(config: AgentConfig, userId: string = 'default'): { 
       );
 
       console.log(`[Agent:${config.name}] Message processed in ${Date.now() - processingStart}ms`);
+
+      // ── Persist conversation summary if one was generated ───────────
+      // The engine generates a summary when history exceeds the context
+      // window. We persist it so it's available for future turns without
+      // re-generating.
+      if (conversationSummary) {
+        // Remove any old summary from in-memory history
+        running.conversationHistory = running.conversationHistory.filter(
+          m => !(m.role === 'system' && m.content.startsWith('[CONVERSATION_SUMMARY]'))
+        );
+        // Insert the new summary at the current position
+        running.conversationHistory.push(conversationSummary);
+        agentStorage.appendConversationMessage(userId, config.id, conversationSummary);
+        running.persistedConversationCount += 1;
+      }
 
       // ── Append assistant response to the full in-memory history ─────
       // We do NOT replace running.conversationHistory with the engine's

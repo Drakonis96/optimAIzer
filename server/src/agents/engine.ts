@@ -669,7 +669,7 @@ export async function processAgentMessage(
   context: ToolExecutionContext,
   callbacks: EngineCallbacks,
   source: 'user' | 'scheduler' | 'webhook' = 'user'
-): Promise<{ response: string; updatedHistory: AgentMessage[] }> {
+): Promise<{ response: string; updatedHistory: AgentMessage[]; conversationSummary?: AgentMessage }> {
   const runtimeTuning = resolveAgentRuntimeTuning(config);
   const language = inferAgentLanguage(config);
   const locale = language === 'es' ? 'es-ES' : 'en-US';
@@ -777,8 +777,94 @@ export async function processAgentMessage(
     ? `${systemPrompt}\n\n${fastPathInstruction}`
     : systemPrompt;
 
-  // Build conversation for LLM
-  const history = [...conversationHistory].slice(-maxHistoryMessages);
+  // Build conversation for LLM — with automatic summarization of evicted messages
+  const CONVERSATION_SUMMARY_MARKER = '[CONVERSATION_SUMMARY]';
+  let history: AgentMessage[];
+  let conversationSummaryMsg: AgentMessage | null = null;
+
+  if (conversationHistory.length > maxHistoryMessages) {
+    // Messages that will be evicted from the LLM context window
+    const evictedCount = conversationHistory.length - maxHistoryMessages;
+    const evictedMessages = conversationHistory.slice(0, evictedCount);
+    history = conversationHistory.slice(-maxHistoryMessages);
+
+    // Check if any message in the full history already has a summary
+    // (to avoid re-summarizing every turn)
+    const existingSummary = conversationHistory.find(
+      m => m.role === 'system' && m.content.startsWith(CONVERSATION_SUMMARY_MARKER)
+    );
+
+    // Only re-summarize if: no existing summary, OR the conversation has grown
+    // significantly since the last summary (>= 10 new evicted messages beyond last summary)
+    const summaryIsStale = existingSummary
+      ? evictedMessages.filter(m => m.timestamp > existingSummary.timestamp).length >= 10
+      : true;
+
+    if (summaryIsStale && evictedMessages.length >= 4 && !useFastPath) {
+      try {
+        const provider = createProvider(config.provider);
+        // Build a compact transcript of evicted messages for summarization
+        const evictedTranscript = evictedMessages
+          .filter(m => m.content.trim() && !m.content.startsWith(CONVERSATION_SUMMARY_MARKER))
+          .map(m => {
+            const role = m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Assistant' : 'System';
+            const snippet = m.content.length > 200 ? m.content.slice(0, 200) + '...' : m.content;
+            return `${role}: ${snippet}`;
+          })
+          .join('\n');
+
+        // Limit transcript to avoid blowing up the summarization call
+        const maxTranscript = 3000;
+        const trimmedTranscript = evictedTranscript.length > maxTranscript
+          ? evictedTranscript.slice(0, maxTranscript) + '\n[...]'
+          : evictedTranscript;
+
+        const summaryPrompt = language === 'es'
+          ? `Resume la siguiente conversación previa en máximo 150 palabras. Incluye: decisiones tomadas, datos clave mencionados, acciones completadas y contexto importante. No incluyas saludos ni formato. Solo el resumen factual.`
+          : `Summarize the following previous conversation in at most 150 words. Include: decisions made, key data mentioned, completed actions and important context. No greetings or formatting. Just the factual summary.`;
+
+        const summary = await withTimeout(
+          provider.chat({
+            model: config.model,
+            messages: [{ role: 'user', content: `${summaryPrompt}\n\n${trimmedTranscript}` }],
+            maxTokens: 300,
+            temperature: 0.1,
+          }),
+          15_000,
+          'Conversation summary'
+        );
+
+        if (summary && summary.trim()) {
+          conversationSummaryMsg = {
+            role: 'system',
+            content: `${CONVERSATION_SUMMARY_MARKER} ${language === 'es' ? 'Resumen de conversación previa' : 'Previous conversation summary'}: ${summary.trim()}`,
+            timestamp: Date.now(),
+          };
+          // Remove any old summary from the history slice before injecting new one
+          const filteredHistory = history.filter(
+            m => !(m.role === 'system' && m.content.startsWith(CONVERSATION_SUMMARY_MARKER))
+          );
+          history = [conversationSummaryMsg, ...filteredHistory];
+          console.log(
+            `[Agent:${config.name}] ${language === 'es' ? 'Conversación compactada' : 'Conversation compacted'}: ${evictedCount} ${language === 'es' ? 'mensajes resumidos' : 'messages summarized'}`
+          );
+        }
+      } catch (summaryError: any) {
+        // Non-critical: if summarization fails, proceed without it
+        console.warn(
+          `[Agent:${config.name}] Conversation summary failed (non-critical): ${summaryError?.message || summaryError}`
+        );
+      }
+    } else if (existingSummary) {
+      // Re-inject existing summary at the front of the history slice
+      const filteredHistory = history.filter(
+        m => !(m.role === 'system' && m.content.startsWith(CONVERSATION_SUMMARY_MARKER))
+      );
+      history = [existingSummary, ...filteredHistory];
+    }
+  } else {
+    history = [...conversationHistory];
+  }
   
   // Add the new user message
   const newUserMsg: AgentMessage = {
@@ -1218,7 +1304,7 @@ const nativeTools = buildNativeToolDefinitions(context.mcpManager?.allTools);
     fullResponse = stripToolArtifacts(fullResponse).trim();
 
     callbacks.onResponse(fullResponse);
-    return { response: fullResponse, updatedHistory: history };
+    return { response: fullResponse, updatedHistory: history, conversationSummary: conversationSummaryMsg || undefined };
   } catch (error: any) {
     const errorMsg = `Error del agente: ${error.message}`;
     callbacks.onError(errorMsg);
@@ -1228,6 +1314,7 @@ const nativeTools = buildNativeToolDefinitions(context.mcpManager?.allTools);
         ...history,
         { role: 'assistant', content: errorMsg, timestamp: Date.now() },
       ],
+      conversationSummary: conversationSummaryMsg || undefined,
     };
   }
 }
