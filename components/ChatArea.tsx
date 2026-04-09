@@ -1,11 +1,12 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Send, Bot, User as UserIcon, Paperclip, Mic, Quote as QuoteIcon, X, Copy, RefreshCw, GitBranch, Check, Database, FileText, File as FileIcon, Eye } from 'lucide-react';
+import { Send, Bot, User as UserIcon, Paperclip, Mic, Quote as QuoteIcon, X, Copy, RefreshCw, GitBranch, Check, Database, FileText, File as FileIcon, Eye, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message, MessageAttachment, Quote, Language, QuickInsertPrompt } from '../types';
 import { TRANSLATIONS } from '../constants';
 import { parseFile, formatAttachmentAsMarkdown, type ParsedAttachment } from '../utils/fileParser';
+import { getBuiltinSkillsApi, type SkillSummaryApi } from '../services/api';
 
 const ACCEPTED_FILE_TYPES = [
   '.txt,.md,.markdown,.json,.csv,.yml,.yaml,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.go,.java,.rs,.sql,.sh,.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.rb,.php,.c,.cpp,.h,.hpp,.cs,.swift,.kt,.lua,.r,.toml,.ini,.cfg,.conf,.env,.log,.diff,.patch',
@@ -280,7 +281,7 @@ const formatCostBadgeUsd = (value: number): string => `$${Math.max(0, value).toF
 interface ChatAreaProps {
   conversationId: string;
   messages: Message[];
-  onSendMessage: (text: string, quote?: Quote, attachments?: MessageAttachment[]) => void;
+  onSendMessage: (text: string, quote?: Quote, attachments?: MessageAttachment[], skills?: string[]) => void;
   onCancelStreaming: () => void;
   onRetry: (text: string) => void;
   onBranch: (msgId: string) => void;
@@ -288,6 +289,7 @@ interface ChatAreaProps {
   isTyping: boolean;
   ragStatus: string | null;
   quickPrompts: QuickInsertPrompt[];
+  enableSkills?: boolean;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ 
@@ -300,7 +302,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     language,
     isTyping,
     ragStatus,
-    quickPrompts
+    quickPrompts,
+    enableSkills
 }) => {
   const t = TRANSLATIONS[language];
   const [input, setInput] = useState('');
@@ -314,6 +317,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isParsingFile, setIsParsingFile] = useState(false);
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null);
+  const [isSkillsMenuOpen, setIsSkillsMenuOpen] = useState(false);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [builtinSkills, setBuiltinSkills] = useState<SkillSummaryApi[]>([]);
+  const [skillsLoaded, setSkillsLoaded] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -321,6 +328,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const promptMenuRef = useRef<HTMLDivElement>(null);
+  const skillsMenuRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -368,10 +376,26 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       if (promptMenuRef.current && !promptMenuRef.current.contains(event.target as Node)) {
         setIsPromptMenuOpen(false);
       }
+      if (skillsMenuRef.current && !skillsMenuRef.current.contains(event.target as Node)) {
+        setIsSkillsMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Load builtin skills on first open
+  useEffect(() => {
+    if (!isSkillsMenuOpen || skillsLoaded) return;
+    let cancelled = false;
+    getBuiltinSkillsApi().then((skills) => {
+      if (!cancelled) {
+        setBuiltinSkills(skills);
+        setSkillsLoaded(true);
+      }
+    }).catch(() => { if (!cancelled) setSkillsLoaded(true); });
+    return () => { cancelled = true; };
+  }, [isSkillsMenuOpen, skillsLoaded]);
 
   useEffect(() => {
     if (!previewTarget) return;
@@ -429,7 +453,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       error: a.error,
     }));
 
-    onSendMessage(finalText, activeQuote || undefined, messageAttachments.length > 0 ? messageAttachments : undefined);
+    onSendMessage(finalText, activeQuote || undefined, messageAttachments.length > 0 ? messageAttachments : undefined, selectedSkillIds.length > 0 ? selectedSkillIds : undefined);
     setInput('');
     setActiveQuote(null);
     setPendingAttachments([]);
@@ -1234,6 +1258,92 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* Skills Selector Button */}
+                {enableSkills && (
+                  <div className="relative" ref={skillsMenuRef}>
+                    <button
+                      onClick={() => setIsSkillsMenuOpen((prev) => !prev)}
+                      className={`p-2 transition-colors rounded-lg ${
+                        selectedSkillIds.length > 0
+                          ? 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20'
+                          : 'text-zinc-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      }`}
+                      title={selectedSkillIds.length > 0
+                        ? t.chatArea.skillsSelected.replace('{count}', String(selectedSkillIds.length))
+                        : t.chatArea.skills}
+                    >
+                      <Sparkles size={18} />
+                    </button>
+
+                    {isSkillsMenuOpen && (
+                      <div className="absolute right-0 bottom-12 w-80 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden z-30">
+                        <div className="px-3 py-2 text-[10px] uppercase tracking-wide font-semibold text-zinc-500 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                          <span>{t.chatArea.skillsSelect}</span>
+                          {selectedSkillIds.length > 0 && (
+                            <button
+                              onClick={() => setSelectedSkillIds([])}
+                              className="text-[9px] text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium"
+                            >
+                              {t.chatArea.skillsClear}
+                            </button>
+                          )}
+                        </div>
+                        {/* Auto-detect option */}
+                        <button
+                          onClick={() => { setSelectedSkillIds([]); setIsSkillsMenuOpen(false); }}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors ${
+                            selectedSkillIds.length === 0
+                              ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
+                              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                          }`}
+                        >
+                          <Sparkles size={14} />
+                          <span className="font-medium">{t.chatArea.skillsAutoDetect}</span>
+                        </button>
+                        <div className="border-t border-zinc-100 dark:border-zinc-800" />
+                        <div className="max-h-56 overflow-y-auto py-1">
+                          {builtinSkills.length === 0 && skillsLoaded && (
+                            <p className="px-3 py-2 text-xs text-zinc-400">{t.chatArea.skillsNone}</p>
+                          )}
+                          {builtinSkills.map((skill) => {
+                            const isSelected = selectedSkillIds.includes(skill.id);
+                            const displayName = language === 'en' && skill.name_en ? skill.name_en : skill.name;
+                            const displayDesc = language === 'en' && skill.description_en ? skill.description_en : skill.description;
+                            return (
+                              <button
+                                key={skill.id}
+                                onClick={() => {
+                                  setSelectedSkillIds((prev) =>
+                                    isSelected ? prev.filter((id) => id !== skill.id) : [...prev, skill.id]
+                                  );
+                                }}
+                                className={`w-full text-left px-3 py-2 transition-colors flex items-start gap-2 ${
+                                  isSelected
+                                    ? 'bg-amber-50/50 dark:bg-amber-900/10'
+                                    : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                }`}
+                              >
+                                <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                                  isSelected
+                                    ? 'bg-amber-500 border-amber-500 text-white'
+                                    : 'border-zinc-300 dark:border-zinc-600'
+                                }`}>
+                                  {isSelected && <Check size={10} />}
+                                </div>
+                                <div className="overflow-hidden">
+                                  <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{displayName}</p>
+                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">{displayDesc}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <button
                   onClick={toggleVoiceInput}
                   className={`p-2 transition-colors rounded-lg ${

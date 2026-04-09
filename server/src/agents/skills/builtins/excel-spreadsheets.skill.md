@@ -48,16 +48,21 @@ Este skill permite trabajar con archivos Excel (.xlsx):
 5. Ofrecer análisis, filtrado o transformación según necesite el usuario
 
 ### Crear un Excel
-1. Determinar la estructura de datos necesaria
-2. Para cada hoja, definir:
+1. **PLAN DE ACTUACIÓN**: Antes de crear el archivo, generar un plan paso a paso visible para el usuario que incluya:
+   - Objetivo del archivo Excel
+   - Hojas planificadas (nombre y propósito de cada una)
+   - Estructura de datos: columnas, tipos de datos, fórmulas
+   - Formato y estilo a aplicar (colores, anchos de columna)
+2. Determinar la estructura de datos necesaria
+3. Para cada hoja, definir:
    - `name`: Nombre de la hoja
    - `headers`: Array de encabezados de columna
    - `rows`: Array de arrays con los datos
    - `columnWidths`: Anchos de columna (opcional)
    - `headerStyle`: Estilo de encabezados (bold, backgroundColor, fontColor)
    - `formulas`: Fórmulas de Excel (ej: SUM, AVERAGE, VLOOKUP)
-3. Llamar a `create_excel` con el array de hojas
-4. Informar la ruta del archivo generado
+4. Llamar a `create_excel` con el array de hojas
+5. Informar la ruta del archivo generado
 
 ### Editar un Excel existente
 1. Leer el Excel con `read_excel` para entender su estructura
@@ -168,10 +173,15 @@ This skill allows working with Excel files (.xlsx):
 5. Offer analysis, filtering or transformation as needed
 
 ### Create an Excel file
-1. Determine the data structure needed
-2. For each sheet, define: name, headers, rows, columnWidths, headerStyle, formulas
-3. Call `create_excel` with the sheets array
-4. Report the generated file path
+1. **ACTION PLAN**: Before creating the file, generate a visible step-by-step plan for the user including:
+   - File objective
+   - Planned sheets (name and purpose of each)
+   - Data structure: columns, data types, formulas
+   - Formatting and style (colors, column widths)
+2. Determine the data structure needed
+3. For each sheet, define: name, headers, rows, columnWidths, headerStyle, formulas
+4. Call `create_excel` with the sheets array
+5. Report the generated file path
 
 ### Edit an existing Excel
 1. Read with `read_excel` to understand its structure

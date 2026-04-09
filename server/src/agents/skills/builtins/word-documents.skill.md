@@ -48,14 +48,19 @@ Este skill permite trabajar con documentos Word (.docx):
 4. Presentar un resumen o el contenido según lo que pida el usuario
 
 ### Crear un documento Word
-1. Entender el contenido que el usuario necesita
-2. Estructurar el contenido en bloques:
+1. **PLAN DE ACTUACIÓN**: Antes de crear el documento, generar un plan paso a paso visible para el usuario que incluya:
+   - Objetivo del documento
+   - Estructura propuesta (secciones, encabezados)
+   - Contenido clave de cada sección
+   - Formato y estilo a aplicar
+2. Entender el contenido que el usuario necesita
+3. Estructurar el contenido en bloques:
    - `heading`: Encabezados con nivel 1-6
    - `paragraph`: Párrafos con opciones de negrita/cursiva/estilo
    - `bullet`: Listas con viñetas (nivel de indentación)
    - `table`: Tablas con filas y columnas
-3. Llamar a `create_word` con el array de bloques en JSON
-4. Informar la ruta del archivo generado para que el usuario lo descargue
+4. Llamar a `create_word` con el array de bloques en JSON
+5. Informar la ruta del archivo generado para que el usuario lo descargue
 
 ### Ejemplo de contenido JSON
 ```json
@@ -98,10 +103,15 @@ This skill allows working with Word documents (.docx):
 4. Present a summary or content as requested
 
 ### Create a Word document
-1. Understand the content the user needs
-2. Structure content into blocks (heading, paragraph, bullet, table)
-3. Call `create_word` with the JSON blocks array
-4. Report the generated file path for download
+1. **ACTION PLAN**: Before creating the document, generate a visible step-by-step plan for the user including:
+   - Document objective
+   - Proposed structure (sections, headings)
+   - Key content for each section
+   - Formatting and style to apply
+2. Understand the content the user needs
+3. Structure content into blocks (heading, paragraph, bullet, table)
+4. Call `create_word` with the JSON blocks array
+5. Report the generated file path for download
 
 ## Rules
 - Always structure documents with hierarchical headings.

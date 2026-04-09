@@ -2193,7 +2193,7 @@ Rules:
 - Synthesize a clear final answer for the user.`;
   };
 
-  const handleSendMessage = async (text: string, quote?: Quote, attachments?: MessageAttachment[]) => {
+  const handleSendMessage = async (text: string, quote?: Quote, attachments?: MessageAttachment[], skills?: string[]) => {
     if (!text.trim() && (!attachments || attachments.length === 0)) return;
 
     cancelOngoingRequest();
@@ -2993,7 +2993,7 @@ Rules:
               : undefined,
             tooling: resolveTooling(appSettings.provider),
             requestId: streamRequestId,
-            skills: appSettings.enableSkills || undefined,
+            skills: skills && skills.length > 0 ? skills : (appSettings.enableSkills || undefined),
           },
           {
             onToken: (token) => {
@@ -4505,6 +4505,7 @@ Rules:
                 isTyping={isTyping}
                 ragStatus={ragStatus}
                 quickPrompts={quickInsertPrompts}
+                enableSkills={appSettings.enableSkills}
               />
             </main>
           </>

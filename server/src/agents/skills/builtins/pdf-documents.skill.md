@@ -45,15 +45,20 @@ Este skill permite trabajar con documentos PDF:
 4. Presentar un resumen o el contenido según lo solicitado
 
 ### Crear un PDF
-1. Determinar el contenido necesario
-2. Estructurar en bloques:
+1. **PLAN DE ACTUACIÓN**: Antes de crear el PDF, generar un plan paso a paso visible para el usuario que incluya:
+   - Objetivo del documento PDF
+   - Estructura propuesta (secciones, encabezados)
+   - Contenido clave de cada sección
+   - Elementos especiales (imágenes, comentarios, saltos de página)
+2. Determinar el contenido necesario
+3. Estructurar en bloques:
    - `heading`: Encabezados (fontSize configurable, negrita automática)
    - `text`: Párrafos con tamaño configurable, word-wrap automático
    - `comment`: Comentarios/anotaciones con emoji 📝 en color naranja
    - `image`: Imágenes (base64 PNG/JPG) con dimensiones configurables
    - `page_break`: Salto de página
-3. Llamar a `create_pdf` con el array JSON de bloques
-4. Informar la ruta del archivo generado
+4. Llamar a `create_pdf` con el array JSON de bloques
+5. Informar la ruta del archivo generado
 
 ### Anotar un PDF existente
 1. Recibir el PDF del usuario
@@ -121,10 +126,15 @@ This skill allows working with PDF documents:
 4. Present summary or content as requested
 
 ### Create a PDF
-1. Determine needed content
-2. Structure into blocks (heading, text, comment, image, page_break)
-3. Call `create_pdf` with the JSON blocks array
-4. Report the generated file path
+1. **ACTION PLAN**: Before creating the PDF, generate a visible step-by-step plan for the user including:
+   - Document objective
+   - Proposed structure (sections, headings)
+   - Key content for each section
+   - Special elements (images, comments, page breaks)
+2. Determine needed content
+3. Structure into blocks (heading, text, comment, image, page_break)
+4. Call `create_pdf` with the JSON blocks array
+5. Report the generated file path
 
 ### Annotate an existing PDF
 1. Receive the PDF from the user

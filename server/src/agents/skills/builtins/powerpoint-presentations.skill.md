@@ -41,8 +41,14 @@ Este skill permite crear presentaciones PowerPoint (.pptx) profesionales:
 ## Flujo de trabajo
 
 ### Crear una presentación
-1. Entender el tema y estructura deseada
-2. Planificar la estructura de diapositivas:
+1. **PLAN DE ACTUACIÓN**: Antes de crear la presentación, generar un plan paso a paso visible para el usuario que incluya:
+   - Objetivo y audiencia de la presentación
+   - Número de diapositivas y título de cada una
+   - Contenido clave por diapositiva (viñetas, datos, imágenes)
+   - Estilo visual (colores, layouts)
+   - Notas del presentador planificadas
+2. Entender el tema y estructura deseada
+3. Planificar la estructura de diapositivas:
    - Diapositiva 1: Título y subtítulo
    - Diapositivas intermedias: Contenido con texto, viñetas, imágenes
    - Diapositiva final: Resumen/conclusiones
@@ -57,8 +63,8 @@ Este skill permite crear presentaciones PowerPoint (.pptx) profesionales:
    - `leftColumn`/`rightColumn`: Texto para layout de dos columnas
    - `backgroundColor`: Color de fondo (hex, ej: "FFFFFF")
    - `fontColor`: Color de texto (hex, ej: "363636")
-4. Llamar a `create_powerpoint` con el array de slides en JSON
-5. Informar la ruta del archivo generado
+5. Llamar a `create_powerpoint` con el array de slides en JSON
+6. Informar la ruta del archivo generado
 
 ### Buscar e insertar imágenes
 1. Usar `web_search` para encontrar imágenes relevantes
@@ -145,11 +151,17 @@ This skill creates professional PowerPoint (.pptx) presentations:
 ## Workflow
 
 ### Create a presentation
-1. Understand the topic and desired structure
-2. Plan slide structure (title, content slides, closing)
-3. For each slide, define: title, content, notes, layout, bulletPoints, images
-4. Call `create_powerpoint` with the slides JSON array
-5. Report the generated file path
+1. **ACTION PLAN**: Before creating the presentation, generate a visible step-by-step plan for the user including:
+   - Objective and target audience
+   - Number of slides and title of each
+   - Key content per slide (bullets, data, images)
+   - Visual style (colors, layouts)
+   - Planned presenter notes
+2. Understand the topic and desired structure
+3. Plan slide structure (title, content slides, closing)
+4. For each slide, define: title, content, notes, layout, bulletPoints, images
+5. Call `create_powerpoint` with the slides JSON array
+6. Report the generated file path
 
 ### Search and insert images
 1. Use `web_search` to find relevant images

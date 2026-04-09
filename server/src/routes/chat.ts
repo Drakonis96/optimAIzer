@@ -457,7 +457,7 @@ async function executeChatDocumentTool(
   }
 }
 
-const CHAT_DOC_SYSTEM_SUFFIX = `\n\nTienes acceso a herramientas para crear documentos (Word, PDF, PowerPoint, Excel) y descargar/analizar imágenes. Cuando el usuario pida crear un documento, usa SIEMPRE las herramientas disponibles. NUNCA generes código o scripts para crear documentos. Incluye siempre en tu respuesta el enlace de descarga que devuelve la herramienta.`;
+const CHAT_DOC_SYSTEM_SUFFIX = `\n\nTienes acceso a herramientas para crear documentos (Word, PDF, PowerPoint, Excel) y descargar/analizar imágenes. Cuando el usuario pida crear un documento, usa SIEMPRE las herramientas disponibles. NUNCA generes código o scripts para crear documentos. Incluye siempre en tu respuesta el enlace de descarga que devuelve la herramienta.\n\nPLAN DE ACTUACIÓN: Antes de crear o editar cualquier documento, genera primero un plan paso a paso visible para el usuario que incluya: objetivo del documento, estructura propuesta (secciones/hojas/diapositivas), contenido clave de cada parte y formato/estilo a aplicar. Luego ejecuta el plan usando las herramientas.`;
 
 /**
  * POST /api/chat

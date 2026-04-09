@@ -433,7 +433,13 @@ export const TRANSLATIONS = {
             previewKindReact: "React",
             closePreview: "Close preview",
             conciliumCost: "Concilium",
-            soloLeaderCost: "Solo leader"
+            soloLeaderCost: "Solo leader",
+            skills: "Skills",
+            skillsSelect: "Select skills",
+            skillsSelected: "{count} skill(s) selected",
+            skillsClear: "Clear selection",
+            skillsAutoDetect: "Auto-detect (default)",
+            skillsNone: "No skills available"
         },
         settingsModal: {
             title: "Settings",
@@ -742,7 +748,13 @@ export const TRANSLATIONS = {
             previewKindReact: "React",
             closePreview: "Cerrar vista previa",
             conciliumCost: "Concilium",
-            soloLeaderCost: "Solo líder"
+            soloLeaderCost: "Solo líder",
+            skills: "Skills",
+            skillsSelect: "Seleccionar skills",
+            skillsSelected: "{count} skill(s) seleccionado(s)",
+            skillsClear: "Limpiar selección",
+            skillsAutoDetect: "Auto-detectar (por defecto)",
+            skillsNone: "No hay skills disponibles"
         },
         settingsModal: {
             title: "Ajustes",
